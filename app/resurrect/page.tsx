@@ -18,59 +18,52 @@ interface ResurrectionStep {
   details?: string;
 }
 
+const scenarioSteps: Record<string, ResurrectionStep[]> = {
+  "outdated-react": [
+    { id: "analyze", title: "Analyzing React Version", description: "Detecting React 16/17 patterns", status: "pending", icon: Code2 },
+    { id: "update-react", title: "Updating to React 19", description: "Upgrading React and ReactDOM", status: "pending", icon: Package },
+    { id: "hooks", title: "Converting to Hooks", description: "Migrating class components", status: "pending", icon: Zap },
+    { id: "router", title: "Updating React Router", description: "Migrating to v6", status: "pending", icon: GitBranch },
+    { id: "deploy", title: "Deploying", description: "Deploying to Vercel", status: "pending", icon: Rocket },
+  ],
+  "no-auth": [
+    { id: "analyze", title: "Analyzing App Structure", description: "Detecting authentication needs", status: "pending", icon: Code2 },
+    { id: "install-auth", title: "Installing Stack Auth", description: "Adding Stack Auth SDK", status: "pending", icon: Package },
+    { id: "auth-pages", title: "Creating Auth Pages", description: "Building login/signup pages", status: "pending", icon: Shield },
+    { id: "protected", title: "Adding Protected Routes", description: "Securing private pages", status: "pending", icon: Shield },
+    { id: "deploy", title: "Deploying", description: "Deploying to Vercel", status: "pending", icon: Rocket },
+  ],
+  "nextjs-migration": [
+    { id: "analyze", title: "Analyzing Next.js Version", description: "Detecting Pages Router", status: "pending", icon: Code2 },
+    { id: "update-next", title: "Updating Next.js", description: "Upgrading to v14", status: "pending", icon: Package },
+    { id: "app-router", title: "Creating App Directory", description: "Setting up App Router", status: "pending", icon: GitBranch },
+    { id: "migrate-pages", title: "Migrating Pages", description: "Converting to Server Components", status: "pending", icon: Zap },
+    { id: "api-routes", title: "Updating API Routes", description: "Converting to Route Handlers", status: "pending", icon: Code2 },
+    { id: "deploy", title: "Deploying", description: "Deploying to Vercel", status: "pending", icon: Rocket },
+  ],
+  "default": [
+    { id: "analyze", title: "Analyzing Repository", description: "Cloning and analyzing codebase", status: "pending", icon: Code2 },
+    { id: "dependencies", title: "Updating Dependencies", description: "Upgrading packages", status: "pending", icon: Package },
+    { id: "breaking", title: "Fixing Breaking Changes", description: "AI-powered transformation", status: "pending", icon: Zap },
+    { id: "auth", title: "Adding Stack Auth", description: "Integrating authentication", status: "pending", icon: Shield },
+    { id: "deploy", title: "Deploying to Production", description: "Deploying to Vercel", status: "pending", icon: Rocket },
+    { id: "pr", title: "Creating Pull Request", description: "Generating PR", status: "pending", icon: GitBranch },
+  ]
+};
+
 export default function ResurrectPage() {
   const searchParams = useSearchParams();
   const repoUrl = searchParams.get("repo") || "";
+  const scenario = searchParams.get("scenario") || "default";
   
   const [isResurrecting, setIsResurrecting] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [deployedUrl, setDeployedUrl] = useState("");
   const [githubPrUrl, setGithubPrUrl] = useState("");
   
-  const [steps, setSteps] = useState<ResurrectionStep[]>([
-    {
-      id: "analyze",
-      title: "Analyzing Repository",
-      description: "Cloning and analyzing codebase structure",
-      status: "pending",
-      icon: Code2,
-    },
-    {
-      id: "dependencies",
-      title: "Updating Dependencies",
-      description: "Upgrading packages to latest versions",
-      status: "pending",
-      icon: Package,
-    },
-    {
-      id: "breaking",
-      title: "Fixing Breaking Changes",
-      description: "AI-powered code transformation",
-      status: "pending",
-      icon: Zap,
-    },
-    {
-      id: "auth",
-      title: "Adding Stack Auth",
-      description: "Integrating authentication system",
-      status: "pending",
-      icon: Shield,
-    },
-    {
-      id: "deploy",
-      title: "Deploying to Production",
-      description: "Deploying to Vercel",
-      status: "pending",
-      icon: Rocket,
-    },
-    {
-      id: "pr",
-      title: "Creating Pull Request",
-      description: "Generating PR with all changes",
-      status: "pending",
-      icon: GitBranch,
-    },
-  ]);
+  const [steps, setSteps] = useState<ResurrectionStep[]>(
+    scenarioSteps[scenario] || scenarioSteps["default"]
+  );
 
   const startResurrection = async () => {
     setIsResurrecting(true);

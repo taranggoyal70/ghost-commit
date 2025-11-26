@@ -27,6 +27,9 @@ export default function Home() {
               <span className="text-2xl font-bold text-white">Ghost Commit</span>
             </div>
             <div className="flex items-center space-x-4">
+              <Link href="/use-cases" className="text-gray-300 hover:text-white transition">
+                Use Cases
+              </Link>
               <Link href="/dashboard" className="text-gray-300 hover:text-white transition">
                 Dashboard
               </Link>
@@ -112,6 +115,14 @@ export default function Home() {
             <p className="text-sm text-gray-400 mt-3">
               ✨ Powered by Stack Auth • Free for first resurrection
             </p>
+            <div className="mt-6">
+              <Link
+                href="/use-cases"
+                className="text-purple-400 hover:text-purple-300 transition text-sm font-semibold"
+              >
+                Or browse 10+ resurrection scenarios →
+              </Link>
+            </div>
           </div>
 
           {/* Features Grid */}
