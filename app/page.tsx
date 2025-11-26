@@ -4,16 +4,36 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Ghost, Github, Sparkles, Zap, Code2, Rocket, CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
+import APIClient from "@/lib/api-client";
 
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [error, setError] = useState("");
+
+  const handleAnalyze = async () => {
+    if (!repoUrl) return;
+    
+    setIsAnalyzing(true);
+    setError("");
+    setAnalysisResult(null);
+    
+    try {
+      const result = await APIClient.analyzeRepository(repoUrl);
+      setAnalysisResult(result);
+      setIsAnalyzing(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to analyze repository");
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleResurrect = async () => {
     if (!repoUrl) return;
-    setIsAnalyzing(true);
-    // Navigate to resurrection page
-    window.location.href = `/resurrect?repo=${encodeURIComponent(repoUrl)}`;
+    
+    const scenario = analysisResult?.recommendations?.scenario || "default";
+    window.location.href = `/resurrect?repo=${encodeURIComponent(repoUrl)}&scenario=${scenario}`;
   };
 
   return (

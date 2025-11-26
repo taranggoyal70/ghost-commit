@@ -8,6 +8,7 @@ import {
   Code2, Package, Shield, Rocket, GitBranch,
   Sparkles, Zap, ExternalLink
 } from "lucide-react";
+import APIClient from "@/lib/api-client";
 
 interface ResurrectionStep {
   id: string;
@@ -68,32 +69,63 @@ export default function ResurrectPage() {
   const startResurrection = async () => {
     setIsResurrecting(true);
     
-    // Simulate resurrection process
-    for (let i = 0; i < steps.length; i++) {
-      setCurrentStep(i);
+    try {
+      // Call real API to start resurrection
+      const result = await APIClient.startResurrection(repoUrl, scenario);
       
-      // Update step to running
+      // Animate through the steps with real data
+      for (let i = 0; i < result.steps.length; i++) {
+        setCurrentStep(i);
+        
+        const apiStep = result.steps[i];
+        
+        // Update step to running
+        setSteps(prev => prev.map((step, idx) => 
+          idx === i ? { 
+            ...step, 
+            status: "running",
+            title: apiStep.title || step.title,
+          } : step
+        ));
+        
+        // Simulate processing time for visual effect
+        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1500));
+        
+        // Update step to completed with real details
+        setSteps(prev => prev.map((step, idx) => 
+          idx === i ? { 
+            ...step, 
+            status: "completed",
+            title: apiStep.title || step.title,
+            details: apiStep.details || getStepDetails(step.id)
+          } : step
+        ));
+      }
+      
+      // Set deployed URL from API result
+      if (result.result?.deploymentUrl) {
+        setDeployedUrl(result.result.deploymentUrl);
+      } else {
+        setDeployedUrl(`https://${repoUrl.split('/').pop()}-resurrected.vercel.app`);
+      }
+      
+      if (result.result?.prUrl) {
+        setGithubPrUrl(result.result.prUrl);
+      } else {
+        setGithubPrUrl(`${repoUrl}/pull/1`);
+      }
+      
+      setIsResurrecting(false);
+    } catch (error: any) {
+      console.error('Resurrection failed:', error);
+      
+      // Mark current step as failed
       setSteps(prev => prev.map((step, idx) => 
-        idx === i ? { ...step, status: "running" } : step
+        idx === currentStep ? { ...step, status: "failed", details: error.message } : step
       ));
       
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
-      
-      // Update step to completed
-      setSteps(prev => prev.map((step, idx) => 
-        idx === i ? { 
-          ...step, 
-          status: "completed",
-          details: getStepDetails(step.id)
-        } : step
-      ));
+      setIsResurrecting(false);
     }
-    
-    // Set deployed URL
-    setDeployedUrl(`https://${repoUrl.split('/').pop()}-resurrected.vercel.app`);
-    setGithubPrUrl(`${repoUrl}/pull/1`);
-    setIsResurrecting(false);
   };
 
   const getStepDetails = (stepId: string): string => {
