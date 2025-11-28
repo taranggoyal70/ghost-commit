@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Ghost, Github, Sparkles, Zap, Code2, Rocket, CheckCircle2, XCircle } from "lucide-react";
+import { Ghost, Github, Sparkles, Zap, Code2, Rocket, CheckCircle2, XCircle, LogOut } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import APIClient from "@/lib/api-client";
 import { useAuth } from "./hooks/useAuth";
 
@@ -14,7 +15,15 @@ export default function Home() {
   const [error, setError] = useState("");
   
   // Check if user is signed in
-  const { user } = useAuth();
+  const { user, app } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    if (app) {
+      await app.signOut();
+    }
+    router.push("/");
+  };
 
   const handleAnalyze = async () => {
     if (!repoUrl) return;
@@ -65,9 +74,18 @@ export default function Home() {
                   <Link href="/dashboard" className="text-gray-300 hover:text-white transition">
                     Dashboard
                   </Link>
-                  <span className="text-sm text-purple-300">
-                    {user.displayName || user.primaryEmail}
-                  </span>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-purple-300">
+                      👋 {user.displayName || user.primaryEmail?.split('@')[0]}
+                    </span>
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
                 </>
               ) : (
                 <Link href="/signin" className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
