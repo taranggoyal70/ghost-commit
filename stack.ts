@@ -19,12 +19,16 @@ if (isStackAuthConfigured) {
         afterSignIn: "/dashboard",
         afterSignUp: "/dashboard",
         afterSignOut: "/",
+        handler: "/handler",
       },
     });
+    console.log('✅ Stack Auth initialized successfully');
   } catch (error) {
-    console.log('Stack Auth not configured - running in demo mode');
+    console.log('❌ Stack Auth initialization failed:', error);
     stackServerApp = null;
   }
+} else {
+  console.log('⚠️ Stack Auth not configured - running in demo mode');
 }
 
 export { stackServerApp };
