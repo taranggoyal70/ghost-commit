@@ -5,8 +5,12 @@ const isStackAuthConfigured =
   process.env.NEXT_PUBLIC_STACK_PROJECT_ID &&
   process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY;
 
-export const stackServerApp = isStackAuthConfigured
-  ? new StackServerApp({
+// Only initialize Stack Auth if properly configured
+let stackServerApp: any = null;
+
+if (isStackAuthConfigured) {
+  try {
+    stackServerApp = new StackServerApp({
       tokenStore: "nextjs-cookie",
       urls: {
         home: "/",
@@ -16,5 +20,11 @@ export const stackServerApp = isStackAuthConfigured
         afterSignUp: "/dashboard",
         afterSignOut: "/",
       },
-    })
-  : null as any; // Fallback for demo mode
+    });
+  } catch (error) {
+    console.log('Stack Auth not configured - running in demo mode');
+    stackServerApp = null;
+  }
+}
+
+export { stackServerApp };
