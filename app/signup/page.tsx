@@ -4,29 +4,50 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Ghost, Mail, Lock, User, Github, Chrome, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useStackApp, useUser } from "@stackframe/stack";
+import { useRouter } from "next/navigation";
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  const app = useStackApp();
+  const user = useUser();
+  const router = useRouter();
+
+  // Redirect if already signed in
+  if (user) {
+    router.push("/dashboard");
+    return null;
+  }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
     
-    // Simulate sign up
-    setTimeout(() => {
-      window.location.href = "/dashboard";
-    }, 1500);
+    try {
+      await app.signUpWithCredential({ email, password });
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to sign up");
+      setIsLoading(false);
+    }
   };
 
-  const handleOAuthSignUp = (provider: string) => {
+  const handleOAuthSignUp = async (provider: "github" | "google") => {
     setIsLoading(true);
-    // In production, this would use Stack Auth OAuth
-    setTimeout(() => {
-      window.location.href = "/dashboard";
-    }, 1500);
+    setError("");
+    
+    try {
+      await app.signInWithOAuth(provider);
+    } catch (err: any) {
+      setError(err.message || "Failed to sign up");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -53,6 +74,13 @@ export default function SignUpPage() {
           className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8"
         >
           <h2 className="text-2xl font-bold text-white mb-6">Get Started Free</h2>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+              {error}
+            </div>
+          )}
 
           {/* OAuth Buttons */}
           <div className="space-y-3 mb-6">

@@ -15,6 +15,8 @@ import {
   LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import { useUser, useStackApp } from "@stackframe/stack";
+import { useRouter } from "next/navigation";
 
 interface Resurrection {
   id: string;
@@ -28,6 +30,21 @@ interface Resurrection {
 }
 
 export default function DashboardPage() {
+  const user = useUser();
+  const app = useStackApp();
+  const router = useRouter();
+
+  // Redirect if not signed in
+  if (!user) {
+    router.push("/signin");
+    return null;
+  }
+
+  const handleSignOut = async () => {
+    await app.signOut();
+    router.push("/");
+  };
+
   const [resurrections] = useState<Resurrection[]>([
     {
       id: "1",
@@ -83,7 +100,10 @@ export default function DashboardPage() {
               <Link href="/" className="text-gray-300 hover:text-white transition">
                 Home
               </Link>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition">
+              <button 
+                onClick={handleSignOut}
+                className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition"
+              >
                 <LogOut className="w-4 h-4" />
                 <span>Sign Out</span>
               </button>
@@ -99,7 +119,9 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-12"
         >
-          <h1 className="text-4xl font-bold text-white mb-2">Welcome back! 👋</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">
+            Welcome back, {user.displayName || user.primaryEmail?.split('@')[0] || 'Developer'}! 👋
+          </h1>
           <p className="text-gray-400 text-lg">
             You've resurrected {stats.completed} repositories so far
           </p>
