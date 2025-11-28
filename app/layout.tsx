@@ -20,9 +20,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <StackProvider app={stackServerApp}>
-          {children}
-        </StackProvider>
+        {stackServerApp ? (
+          <StackProvider app={stackServerApp}>
+            {children}
+          </StackProvider>
+        ) : (
+          children
+        )}
       </body>
     </html>
   );
