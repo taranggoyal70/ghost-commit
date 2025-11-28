@@ -39,6 +39,12 @@ export default function DashboardPage() {
   try {
     app = useStackApp();
     user = useUser();
+    
+    // If Stack Auth is configured but no user, redirect to sign in
+    if (!user) {
+      router.push("/signin");
+      return null;
+    }
   } catch (e) {
     // Stack Auth not configured - demo mode
     // Create a mock user for demo

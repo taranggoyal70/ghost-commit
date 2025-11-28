@@ -5,12 +5,21 @@ import { motion } from "framer-motion";
 import { Ghost, Github, Sparkles, Zap, Code2, Rocket, CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
 import APIClient from "@/lib/api-client";
+import { useUser } from "@stackframe/stack";
 
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [error, setError] = useState("");
+  
+  // Check if user is signed in
+  let user: any = null;
+  try {
+    user = useUser();
+  } catch (e) {
+    // Stack Auth not configured
+  }
 
   const handleAnalyze = async () => {
     if (!repoUrl) return;
@@ -50,12 +59,20 @@ export default function Home() {
               <Link href="/use-cases" className="text-gray-300 hover:text-white transition">
                 Use Cases
               </Link>
-              <Link href="/dashboard" className="text-gray-300 hover:text-white transition">
-                Dashboard
-              </Link>
-              <Link href="/signin" className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
-                Sign In
-              </Link>
+              {user ? (
+                <>
+                  <Link href="/dashboard" className="text-gray-300 hover:text-white transition">
+                    Dashboard
+                  </Link>
+                  <span className="text-sm text-purple-300">
+                    {user.displayName || user.primaryEmail}
+                  </span>
+                </>
+              ) : (
+                <Link href="/signin" className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+                  Sign In
+                </Link>
+              )}
             </div>
           </div>
         </div>
