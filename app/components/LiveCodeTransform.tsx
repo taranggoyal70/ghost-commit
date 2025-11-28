@@ -91,7 +91,7 @@ export default function Button({ children, ...props }: ButtonProps) {
         setCurrentChange((prev) => (prev + 1) % codeChanges.length);
         setIsTransforming(false);
       }, 1500);
-    }, 4000);
+    }, 6000); // Slower interval for better performance
 
     return () => clearInterval(interval);
   }, [isActive]);

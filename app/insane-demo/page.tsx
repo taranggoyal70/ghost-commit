@@ -8,13 +8,11 @@ import Repo3DVisualization from '../components/Repo3DVisualization';
 import Link from 'next/link';
 
 export default function InsaneDemoPage() {
-  const [activeDemo, setActiveDemo] = useState<'code' | '3d' | 'both'>('both');
-  const [isResurrecting, setIsResurrecting] = useState(false);
+  const [activeDemo, setActiveDemo] = useState<'code' | '3d' | 'both'>('code');
+  const [isResurrecting, setIsResurrecting] = useState(true); // Auto-start
 
   const startResurrection = () => {
     setIsResurrecting(true);
-    // Auto-stop after demo
-    setTimeout(() => setIsResurrecting(false), 30000);
   };
 
   return (
@@ -178,7 +176,7 @@ export default function InsaneDemoPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <LiveCodeTransform isActive={isResurrecting || true} />
+            <LiveCodeTransform isActive={isResurrecting} />
           </motion.div>
         )}
 
@@ -189,7 +187,7 @@ export default function InsaneDemoPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Repo3DVisualization isActive={isResurrecting || true} />
+            <Repo3DVisualization isActive={isResurrecting} />
           </motion.div>
         )}
 
