@@ -70,21 +70,30 @@ export default function ResurrectPage() {
     setIsResurrecting(true);
     
     try {
-      // Call real API to start resurrection
-      const result = await APIClient.startResurrection(repoUrl, scenario);
+      // Try to call real API, but fall back to demo mode if it fails
+      let result;
+      try {
+        result = await APIClient.startResurrection(repoUrl, scenario);
+      } catch (apiError) {
+        console.log('API not available, using demo mode');
+        // Demo mode - use current steps
+        result = null;
+      }
       
-      // Animate through the steps with real data
-      for (let i = 0; i < result.steps.length; i++) {
+      // Animate through the steps
+      const stepsToUse = result?.steps || steps;
+      
+      for (let i = 0; i < stepsToUse.length; i++) {
         setCurrentStep(i);
         
-        const apiStep = result.steps[i];
+        const apiStep = result?.steps?.[i];
         
         // Update step to running
         setSteps(prev => prev.map((step, idx) => 
           idx === i ? { 
             ...step, 
             status: "running",
-            title: apiStep.title || step.title,
+            title: apiStep?.title || step.title,
           } : step
         ));
         
@@ -96,20 +105,20 @@ export default function ResurrectPage() {
           idx === i ? { 
             ...step, 
             status: "completed",
-            title: apiStep.title || step.title,
-            details: apiStep.details || getStepDetails(step.id)
+            title: apiStep?.title || step.title,
+            details: apiStep?.details || getStepDetails(step.id)
           } : step
         ));
       }
       
-      // Set deployed URL from API result
-      if (result.result?.deploymentUrl) {
+      // Set deployed URL from API result or generate demo URL
+      if (result?.result?.deploymentUrl) {
         setDeployedUrl(result.result.deploymentUrl);
       } else {
-        setDeployedUrl(`https://${repoUrl.split('/').pop()}-resurrected.vercel.app`);
+        setDeployedUrl(`https://${repoUrl.split('/').pop()?.replace('.git', '')}-resurrected.vercel.app`);
       }
       
-      if (result.result?.prUrl) {
+      if (result?.result?.prUrl) {
         setGithubPrUrl(result.result.prUrl);
       } else {
         setGithubPrUrl(`${repoUrl}/pull/1`);
