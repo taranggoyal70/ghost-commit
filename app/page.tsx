@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Ghost, Github, Sparkles, Zap, Code2, Rocket, CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
 import APIClient from "@/lib/api-client";
-import { useUser } from "@stackframe/stack";
+import { useAuth } from "./hooks/useAuth";
 
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
@@ -14,12 +14,7 @@ export default function Home() {
   const [error, setError] = useState("");
   
   // Check if user is signed in
-  let user: any = null;
-  try {
-    user = useUser();
-  } catch (e) {
-    // Stack Auth not configured
-  }
+  const { user } = useAuth();
 
   const handleAnalyze = async () => {
     if (!repoUrl) return;

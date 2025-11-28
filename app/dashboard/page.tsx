@@ -15,7 +15,7 @@ import {
   LogOut,
 } from "lucide-react";
 import Link from "next/link";
-import { useUser, useStackApp } from "@stackframe/stack";
+import { useAuth } from "../hooks/useAuth";
 import { useRouter } from "next/navigation";
 
 interface Resurrection {
@@ -31,28 +31,19 @@ interface Resurrection {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { app, user, isConfigured } = useAuth();
   
-  // Try to get Stack Auth hooks, but handle if not configured
-  let app: any = null;
-  let user: any = null;
-  
-  try {
-    app = useStackApp();
-    user = useUser();
-    
-    // If Stack Auth is configured but no user, redirect to sign in
-    if (!user) {
-      router.push("/signin");
-      return null;
-    }
-  } catch (e) {
-    // Stack Auth not configured - demo mode
-    // Create a mock user for demo
-    user = {
-      displayName: "Demo User",
-      primaryEmail: "demo@ghostcommit.dev",
-    };
+  // If Stack Auth is configured but no user, redirect to sign in
+  if (isConfigured && !user) {
+    router.push("/signin");
+    return null;
   }
+  
+  // Use demo user if not configured
+  const displayUser = user || {
+    displayName: "Demo User",
+    primaryEmail: "demo@ghostcommit.dev",
+  };
 
   const handleSignOut = async () => {
     if (app) {
@@ -142,7 +133,7 @@ export default function DashboardPage() {
           className="mb-12"
         >
           <h1 className="text-4xl font-bold text-white mb-2">
-            Welcome back, {user.displayName || user.primaryEmail?.split('@')[0] || 'Developer'}! 👋
+            Welcome back, {displayUser.displayName || displayUser.primaryEmail?.split('@')[0] || 'Developer'}! 👋
           </h1>
           <p className="text-gray-400 text-lg">
             You've resurrected {stats.completed} repositories so far
