@@ -3,12 +3,14 @@
 import { useStackApp, useUser } from "@stackframe/stack";
 
 export function useAuth() {
-  try {
-    const app = useStackApp();
-    const user = useUser();
-    return { app, user, isConfigured: true };
-  } catch (error) {
-    // Stack Auth not configured - return null values
-    return { app: null, user: null, isConfigured: false };
-  }
+  // Always call hooks - React requirement
+  const app = useStackApp();
+  const user = useUser();
+  
+  // Return the values - Stack Auth provider handles the null cases
+  return { 
+    app, 
+    user, 
+    isConfigured: !!app 
+  };
 }
