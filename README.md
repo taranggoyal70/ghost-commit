@@ -40,12 +40,13 @@ npm run dev
 
 ## 🏗️ Tech Stack
 
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Python (FastAPI)
-- **Auth**: Stack Auth (YC S24)
-- **AI**: OpenAI GPT-4, Claude
+- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS, Framer Motion
+- **Backend**: Next.js API Routes
+- **Auth**: [Stack Auth](https://stack-auth.com) (Y Combinator S24) 🚀
+- **AI**: OpenAI GPT-4
+- **APIs**: GitHub API (Octokit), OpenAI API
 - **Deployment**: Vercel
-- **Database**: PostgreSQL (Supabase)
+- **Styling**: Tailwind CSS, Glassmorphism UI
 
 ## 🎬 Demo
 

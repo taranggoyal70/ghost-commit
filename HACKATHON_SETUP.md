@@ -147,15 +147,18 @@ Outdated dependencies. Broken build. Dead."
 
 ### **Show Stack Auth Integration (30 seconds)**
 ```
-"And of course, it uses Stack Auth for everything:
-- OAuth sign in with GitHub
-- User dashboard
-- Session management
+"And of course, authentication is powered by Stack Auth - 
+the YC S24 company that makes auth actually simple:
+
+- OAuth sign in with GitHub & Google
 - Protected routes
+- User sessions
+- Beautiful dashboard
 
 [Show sign in page, dashboard]
 
-All powered by Stack Auth."
+Stack Auth handled all of this - I just focused on building 
+the resurrection features. That's the power of great dev tools."
 ```
 
 ### **Closing (30 seconds)**

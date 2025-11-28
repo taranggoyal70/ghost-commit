@@ -158,20 +158,21 @@ For this hackathon, I'm reviving it. It's meta, and it works."
 [Show results]
 ```
 
-### **4. Show Stack Auth (30s)**
+### 4. Show Stack Auth (30s)
 ```
-"All powered by Stack Auth:
-- OAuth sign in
+"Authentication powered by Stack Auth - the YC S24 company:
+- OAuth sign in (GitHub, Google)
 - Protected routes
 - User sessions
-- Dashboard
+- Beautiful dashboard
 
 [Show sign in, dashboard]
 
-Real authentication, zero hassle."
+Stack Auth made this trivial - I focused on resurrection features.
+That's the power of YC-backed dev tools."
 ```
 
-### **5. Closing (30s)**
+### 5. Closing (30s)
 ```
 "Ghost Commit was dead. Now it's alive.
 
