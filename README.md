@@ -1,18 +1,25 @@
 # 👻 Ghost Commit - AI-Powered Repo Resurrection
 
-**Bring your dead GitHub repos back to life with AI**
+> *"This project was dead. Now it's alive. And it can resurrect yours too."*
 
-Built for Stack Auth (YC S24) Mini Hackathon
+**AI-Powered GitHub Repository Resurrection**
+
+Built for the Post-Thanksgiving Mini Hackathon @ Stacker House.
 
 ## 🎯 What It Does
 
-Ghost Commit automatically resurrects dead GitHub repositories by:
+Ghost Commit automatically analyzes, modernizes, and revives dead GitHub repositories using AI.
+
 - 🔍 Analyzing outdated codebases
 - 🔄 Updating all dependencies to latest versions
 - 🔧 Fixing breaking changes automatically
 - 🔐 Adding Stack Auth authentication
 - 🚀 Deploying to production
 - 📝 Generating comprehensive documentation
+
+## 🏆 The Meta Story:
+
+Ghost Commit itself was a dormant idea I started months ago and abandoned. For this hackathon, I'm reviving it - bringing my own dead project back to life. It's the perfect meta demonstration of what the tool does.
 
 ## ⚡ Quick Start
 
