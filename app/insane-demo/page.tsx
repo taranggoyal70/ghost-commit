@@ -31,8 +31,17 @@ export default function InsaneDemoPage() {
                 <span className="text-2xl font-bold text-white">Ghost Commit</span>
               </Link>
               <div className="flex items-center space-x-4">
+                <Link href="/" className="text-gray-300 hover:text-white transition">
+                  Home
+                </Link>
+                <Link href="/use-cases" className="text-gray-300 hover:text-white transition">
+                  Use Cases
+                </Link>
                 <Link href="/demo" className="text-gray-300 hover:text-white transition">
                   Normal Demo
+                </Link>
+                <Link href="/dashboard" className="text-gray-300 hover:text-white transition">
+                  Dashboard
                 </Link>
                 <span className="px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-sm font-bold animate-pulse">
                   🔥 INSANE MODE

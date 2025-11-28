@@ -110,11 +110,17 @@ export default function DashboardPage() {
               <span className="text-2xl font-bold text-white">Ghost Commit</span>
             </Link>
             <div className="flex items-center space-x-4">
+              <Link href="/" className="text-gray-300 hover:text-white transition">
+                Home
+              </Link>
               <Link href="/use-cases" className="text-gray-300 hover:text-white transition">
                 Use Cases
               </Link>
-              <Link href="/" className="text-gray-300 hover:text-white transition">
-                Home
+              <Link href="/demo" className="text-gray-300 hover:text-white transition">
+                Demo
+              </Link>
+              <Link href="/insane-demo" className="text-yellow-300 hover:text-yellow-200 transition font-bold">
+                🔥 Insane Demo
               </Link>
               <button 
                 onClick={handleSignOut}

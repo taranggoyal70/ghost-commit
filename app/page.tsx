@@ -59,6 +59,12 @@ export default function Home() {
               <Link href="/use-cases" className="text-gray-300 hover:text-white transition">
                 Use Cases
               </Link>
+              <Link href="/demo" className="text-gray-300 hover:text-white transition">
+                Demo
+              </Link>
+              <Link href="/insane-demo" className="text-yellow-300 hover:text-yellow-200 transition font-bold">
+                🔥 Insane Demo
+              </Link>
               {user ? (
                 <>
                   <Link href="/dashboard" className="text-gray-300 hover:text-white transition">
@@ -152,12 +158,19 @@ export default function Home() {
             <p className="text-sm text-gray-400 mt-3">
               ✨ Powered by Stack Auth • Free for first resurrection
             </p>
-            <div className="mt-6">
+            <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 href="/use-cases"
                 className="text-purple-400 hover:text-purple-300 transition text-sm font-semibold"
               >
                 Or browse 10+ resurrection scenarios →
+              </Link>
+              <Link
+                href="/insane-demo"
+                className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-lg transition flex items-center space-x-2 animate-pulse"
+              >
+                <Rocket className="w-5 h-5" />
+                <span>🔥 See Insane Demo</span>
               </Link>
             </div>
           </div>
