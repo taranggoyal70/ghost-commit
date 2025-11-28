@@ -8,7 +8,9 @@ import Link from "next/link";
 export default function DemoPage() {
   const [repoUrl, setRepoUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCreatingIssue, setIsCreatingIssue] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [createdIssue, setCreatedIssue] = useState<any>(null);
   const [error, setError] = useState("");
 
   const handleAnalyze = async () => {
@@ -39,6 +41,40 @@ export default function DemoPage() {
       setError(err.message || 'Failed to analyze repository');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleCreateIssue = async () => {
+    if (!result) {
+      setError("Please analyze a repository first");
+      return;
+    }
+
+    setIsCreatingIssue(true);
+    setError("");
+    setCreatedIssue(null);
+
+    try {
+      const response = await fetch('/api/create-issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          repoUrl, 
+          analysis: result.analysis 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        setError(data.error || data.message || 'Failed to create issue');
+      } else {
+        setCreatedIssue(data.issue);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create issue');
+    } finally {
+      setIsCreatingIssue(false);
     }
   };
 
@@ -279,7 +315,86 @@ export default function DemoPage() {
               )}
             </div>
 
-            {/* CTA */}
+            {/* Create Issue Button */}
+            {!createdIssue && (
+              <div className="bg-gradient-to-r from-green-600/20 to-blue-600/20 border border-green-500/30 rounded-2xl p-6">
+                <h2 className="text-2xl font-bold text-white mb-4">Take Action</h2>
+                <p className="text-gray-300 mb-6">
+                  Create a GitHub issue on this repository with these AI-powered recommendations
+                </p>
+                <button
+                  onClick={handleCreateIssue}
+                  disabled={isCreatingIssue}
+                  className="w-full px-8 py-4 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {isCreatingIssue ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Creating Issue...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      <span>Create GitHub Issue (REAL!)</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-gray-400 text-sm mt-3 text-center">
+                  This will create an actual issue on the GitHub repository
+                </p>
+              </div>
+            )}
+
+            {/* Success - Issue Created */}
+            {createdIssue && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-gradient-to-r from-green-600/20 to-blue-600/20 border border-green-500/50 rounded-2xl p-8"
+              >
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-10 h-10 text-white" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-white mb-2">Issue Created! 🎉</h2>
+                  <p className="text-gray-300">
+                    A real GitHub issue has been created with AI recommendations
+                  </p>
+                </div>
+
+                <div className="bg-black/20 rounded-lg p-6 mb-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <p className="text-gray-400 text-sm">Issue #{createdIssue.number}</p>
+                      <p className="text-white font-semibold text-lg">{createdIssue.title}</p>
+                    </div>
+                  </div>
+                  
+                  <a
+                    href={createdIssue.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition"
+                  >
+                    <span>View Issue on GitHub</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-green-300 font-semibold mb-2">
+                    ✅ This is a REAL GitHub issue, not a simulation!
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Check the repository - the issue is actually there
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Other Actions */}
             <div className="text-center">
               <p className="text-gray-300 mb-4">
                 This is real analysis using GitHub API and OpenAI GPT-4!
@@ -288,7 +403,7 @@ export default function DemoPage() {
                 href={`/resurrect?repo=${encodeURIComponent(repoUrl)}`}
                 className="inline-block px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition"
               >
-                Start Full Resurrection →
+                View Full Resurrection Flow →
               </Link>
             </div>
           </motion.div>
