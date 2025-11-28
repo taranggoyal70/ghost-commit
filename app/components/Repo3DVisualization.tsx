@@ -43,11 +43,13 @@ export default function Repo3DVisualization({ isActive }: { isActive: boolean })
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
+    let animationFrameId: number;
+    
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Update rotation
-      setRotation(prev => (prev + 0.005) % (Math.PI * 2));
+      // Update rotation - faster
+      setRotation(prev => (prev + 0.01) % (Math.PI * 2));
 
       // Draw connections
       nodes.forEach(node => {
@@ -104,10 +106,16 @@ export default function Repo3DVisualization({ isActive }: { isActive: boolean })
         }
       });
 
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
     };
 
     animate();
+    
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [isActive, rotation, hoveredNode]);
 
   return (
@@ -204,9 +212,9 @@ export default function Repo3DVisualization({ isActive }: { isActive: boolean })
         </div>
       </div>
 
-      {/* Particle effects */}
+      {/* Particle effects - reduced for performance */}
       <div className="absolute inset-0 pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute w-1 h-1 bg-purple-400 rounded-full"
@@ -219,9 +227,9 @@ export default function Repo3DVisualization({ isActive }: { isActive: boolean })
               scale: [0, 1, 0],
             }}
             transition={{
-              duration: 2 + Math.random() * 2,
+              duration: 3,
               repeat: Infinity,
-              delay: Math.random() * 2,
+              delay: i * 0.4,
             }}
           />
         ))}

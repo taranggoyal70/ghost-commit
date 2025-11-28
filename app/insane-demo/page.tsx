@@ -97,25 +97,26 @@ export default function InsaneDemoPage() {
           </motion.div>
         </div>
 
-        {/* Animated background */}
+        {/* Animated background - optimized */}
         <div className="absolute inset-0 pointer-events-none">
-          {[...Array(30)].map((_, i) => (
+          {[...Array(12)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute w-2 h-2 bg-purple-400 rounded-full"
               style={{
-                left: `${Math.random() * 100}%`,
+                left: `${(i * 8.33)}%`,
                 top: `${Math.random() * 100}%`,
               }}
               animate={{
-                opacity: [0, 1, 0],
-                scale: [0, 2, 0],
-                y: [0, -100],
+                opacity: [0, 0.8, 0],
+                scale: [0, 1.5, 0],
+                y: [0, -80],
               }}
               transition={{
-                duration: 3 + Math.random() * 2,
+                duration: 4,
                 repeat: Infinity,
-                delay: Math.random() * 3,
+                delay: i * 0.3,
+                ease: "easeInOut"
               }}
             />
           ))}

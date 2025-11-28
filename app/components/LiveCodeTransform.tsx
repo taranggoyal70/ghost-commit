@@ -90,8 +90,8 @@ export default function Button({ children, ...props }: ButtonProps) {
       setTimeout(() => {
         setCurrentChange((prev) => (prev + 1) % codeChanges.length);
         setIsTransforming(false);
-      }, 2000);
-    }, 5000);
+      }, 1500);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [isActive]);
