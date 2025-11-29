@@ -99,15 +99,15 @@ export default function MyApp() {
           </div>
           
           <h1 className="text-6xl font-bold text-white mb-6">
-            Why We Chose
+            Stack Auth Integration
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-              Stack Auth
+              In Action
             </span>
           </h1>
           
           <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-            The authentication platform that saved us 40+ hours of development time
-            and gave our users enterprise-grade security from day one.
+            See how Ghost Commit uses Stack Auth to provide seamless authentication,
+            protected routes, and user management - all working in production.
           </p>
 
           <div className="flex justify-center space-x-4">
@@ -147,7 +147,7 @@ export default function MyApp() {
         {/* Features Grid */}
         <div className="mb-20">
           <h2 className="text-4xl font-bold text-white text-center mb-12">
-            What Stack Auth Brings to Ghost Commit
+            Stack Auth Features We're Using
           </h2>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -193,7 +193,7 @@ export default function MyApp() {
           </p>
         </motion.div>
 
-        {/* Benefits for Stack Auth */}
+        {/* Implementation Details */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -201,57 +201,65 @@ export default function MyApp() {
           className="mb-20"
         >
           <h2 className="text-4xl font-bold text-white text-center mb-12">
-            How Ghost Commit Showcases Stack Auth
+            How We Integrated Stack Auth
           </h2>
           
           <div className="grid md:grid-cols-2 gap-8">
             <div className="p-8 bg-gradient-to-br from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-xl">
               <Rocket className="w-12 h-12 text-purple-400 mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-4">Real-World Use Case</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">Authentication Flow</h3>
               <p className="text-gray-300 mb-4">
-                Ghost Commit demonstrates Stack Auth in a production-ready application, showing developers exactly how to integrate it into their projects.
+                Complete authentication system with multiple providers and protected routes.
               </p>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start space-x-2">
                   <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span>Complete OAuth implementation</span>
+                  <span>Google OAuth - One-click sign in</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span>Protected routes and session management</span>
+                  <span>GitHub OAuth - Developer-friendly</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span>User profile and dashboard integration</span>
+                  <span>Email/Password - Traditional option</span>
+                </li>
+                <li className="flex items-start space-x-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <span>Protected dashboard and routes</span>
                 </li>
               </ul>
             </div>
 
             <div className="p-8 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-xl">
               <Users className="w-12 h-12 text-blue-400 mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-4">Developer Experience</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">User Experience</h3>
               <p className="text-gray-300 mb-4">
-                Every developer who uses Ghost Commit experiences Stack Auth's seamless integration, showing them how easy authentication can be.
+                Seamless authentication that just works - no friction, no complexity.
               </p>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start space-x-2">
                   <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span>Instant sign-in with Google/GitHub</span>
+                  <span>Persistent sessions - Stay logged in</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span>Persistent sessions across visits</span>
+                  <span>User profile management</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span>Zero friction authentication</span>
+                  <span>Secure token storage</span>
+                </li>
+                <li className="flex items-start space-x-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <span>Automatic session refresh</span>
                 </li>
               </ul>
             </div>
           </div>
         </motion.div>
 
-        {/* CTA */}
+        {/* Try It */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -260,28 +268,24 @@ export default function MyApp() {
         >
           <Shield className="w-16 h-16 text-purple-400 mx-auto mb-6" />
           <h2 className="text-4xl font-bold text-white mb-4">
-            Ready to Add Stack Auth to Your Project?
+            See Stack Auth in Action
           </h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join Ghost Commit and thousands of other apps using Stack Auth for enterprise-grade authentication in minutes.
+            Try signing in to Ghost Commit and experience the seamless authentication flow yourself.
           </p>
           <div className="flex justify-center space-x-4">
-            <a
-              href="https://docs.stack-auth.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/signin"
               className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition"
             >
-              Read the Docs
-            </a>
-            <a
-              href="https://app.stack-auth.com"
-              target="_blank"
-              rel="noopener noreferrer"
+              Try Sign In
+            </Link>
+            <Link
+              href="/resurrect-live"
               className="px-8 py-4 bg-white/10 border border-white/20 text-white font-semibold rounded-lg hover:bg-white/20 transition"
             >
-              Get Started Free
-            </a>
+              See Resurrection Demo
+            </Link>
           </div>
         </motion.div>
       </div>
