@@ -27,36 +27,48 @@ export class ResurrectionEngine {
 
   async resurrect() {
     try {
+      console.log('🚀 Starting resurrection for', this.config.owner, '/', this.config.repo);
+      
       // Step 1: Clone the repository
+      console.log('📥 Cloning repository...');
       await this.cloneRepo();
 
       // Step 2: Create a new branch
+      console.log('🌿 Creating branch...');
       await this.createBranch();
 
       // Step 3: Add Stack Auth
+      console.log('🔐 Adding Stack Auth...');
       await this.addStackAuth();
 
       // Step 4: Update dependencies
+      console.log('📦 Updating dependencies...');
       await this.updateDependencies();
 
       // Step 5: Commit changes
+      console.log('💾 Committing changes...');
       await this.commitChanges();
 
       // Step 6: Push to GitHub
+      console.log('⬆️  Pushing to GitHub...');
       await this.pushChanges();
 
       // Step 7: Create Pull Request
+      console.log('🔀 Creating Pull Request...');
       const prUrl = await this.createPullRequest();
 
       // Cleanup
+      console.log('🧹 Cleaning up...');
       await this.cleanup();
 
+      console.log('✅ Resurrection complete!');
       return {
         success: true,
         prUrl,
         branch: 'ghost-commit-resurrection',
       };
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Resurrection failed:', error.message);
       await this.cleanup();
       throw error;
     }
@@ -280,12 +292,20 @@ Resurrected by Ghost Commit 👻
   }
 
   private async createPullRequest() {
+    // Detect the default branch
+    const { data: repoData } = await this.octokit.repos.get({
+      owner: this.config.owner,
+      repo: this.config.repo,
+    });
+    
+    const baseBranch = repoData.default_branch || 'main';
+    
     const { data: pr } = await this.octokit.pulls.create({
       owner: this.config.owner,
       repo: this.config.repo,
       title: '👻 Ghost Commit: Repository Resurrection',
       head: 'ghost-commit-resurrection',
-      base: 'main', // or 'master'
+      base: baseBranch,
       body: `# 👻 Repository Resurrected!
 
 This PR adds modern authentication and updates your project.
