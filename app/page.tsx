@@ -158,10 +158,11 @@ export default function Home() {
                   className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
                 />
               </div>
-              <button
-                onClick={handleResurrect}
-                disabled={!repoUrl || isAnalyzing}
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              <Link
+                href={`/resurrect-live?repo=${encodeURIComponent(repoUrl)}`}
+                className={`px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition flex items-center justify-center space-x-2 ${
+                  !repoUrl ? 'opacity-50 pointer-events-none' : ''
+                }`}
               >
                 {isAnalyzing ? (
                   <>
@@ -179,7 +180,7 @@ export default function Home() {
                     <span>Resurrect</span>
                   </>
                 )}
-              </button>
+              </Link>
             </div>
             <p className="text-sm text-gray-400 mt-3">
               ✨ Powered by Stack Auth • Free for first resurrection
