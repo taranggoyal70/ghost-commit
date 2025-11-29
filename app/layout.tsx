@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { StackProvider } from "@stackframe/stack";
 import { stackServerApp } from "@/stack";
-import dynamic from "next/dynamic";
+import ClientOnly from "./components/ClientOnly";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,13 +21,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
-        {stackServerApp ? (
-          <StackProvider app={stackServerApp}>
-            {children}
-          </StackProvider>
-        ) : (
-          children
-        )}
+        <ClientOnly>
+          {stackServerApp ? (
+            <StackProvider app={stackServerApp}>
+              {children}
+            </StackProvider>
+          ) : (
+            children
+          )}
+        </ClientOnly>
       </body>
     </html>
   );
