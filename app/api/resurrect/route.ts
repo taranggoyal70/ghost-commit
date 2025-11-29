@@ -9,7 +9,7 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 }) : null;
 
 // Enable real modifications (set to true for actual GitHub changes)
-const USE_REAL_ENGINE = true;
+const USE_REAL_ENGINE = false; // Demo mode - safer for hackathon!
 
 interface ResurrectionStep {
   id: string;
