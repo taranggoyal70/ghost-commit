@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Ghost, Github, Sparkles, Zap, Code2, Rocket, CheckCircle2, XCircle, LogOut } from "lucide-react";
+import { Ghost, Github, Sparkles, Zap, Code2, Rocket, CheckCircle2, XCircle, LogOut, Shield } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import APIClient from "@/lib/api-client";
@@ -182,9 +182,19 @@ export default function Home() {
                 )}
               </Link>
             </div>
-            <p className="text-sm text-gray-400 mt-3">
-              ✨ Powered by Stack Auth • Free for first resurrection
-            </p>
+            <div className="mt-6 flex flex-col items-center space-y-3">
+              <Link
+                href="/stack-auth-showcase"
+                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-2 border-purple-500/50 rounded-lg hover:border-purple-400 transition group"
+              >
+                <Shield className="w-5 h-5 text-purple-400 group-hover:scale-110 transition" />
+                <span className="text-white font-semibold">Powered by Stack Auth (YC S24)</span>
+                <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
+              </Link>
+              <p className="text-sm text-gray-400">
+                ✨ Enterprise authentication in 5 minutes • Free for first resurrection
+              </p>
+            </div>
             <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 href="/use-cases"
