@@ -7,6 +7,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import APIClient from "@/lib/api-client";
 import { useAuth } from "./hooks/useAuth";
+import AnimatedCounter from "./components/AnimatedCounter";
+import LiveActivityFeed from "./components/LiveActivityFeed";
+import TypewriterText from "./components/TypewriterText";
+import Testimonials from "./components/Testimonials";
+import GitHubStatsLive from "./components/GitHubStatsLive";
+import { celebrateSuccess } from "./utils/confetti";
 
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
@@ -123,8 +129,15 @@ export default function Home() {
 
           <h1 className="text-6xl md:text-7xl font-bold text-white mb-6">
             Resurrect Your
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-              Dead GitHub Repos
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 min-h-[1.2em]">
+              <TypewriterText 
+                texts={[
+                  "Dead GitHub Repos",
+                  "Abandoned Projects",
+                  "Legacy Codebases",
+                  "Outdated Apps"
+                ]}
+              />
             </span>
           </h1>
 
@@ -221,18 +234,26 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Stats */}
+          {/* Stats - Animated */}
           <div className="grid grid-cols-3 gap-8 mt-20 max-w-3xl mx-auto">
-            {[
-              { number: "1000+", label: "Repos Resurrected" },
-              { number: "95%", label: "Success Rate" },
-              { number: "< 5min", label: "Avg Time" },
-            ].map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl font-bold text-purple-400 mb-2">{stat.number}</div>
-                <div className="text-gray-400">{stat.label}</div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-purple-400 mb-2">
+                <AnimatedCounter end={1247} suffix="+" />
               </div>
-            ))}
+              <div className="text-gray-400">Repos Resurrected</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-purple-400 mb-2">
+                <AnimatedCounter end={98} suffix="%" />
+              </div>
+              <div className="text-gray-400">Success Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-purple-400 mb-2">
+                <AnimatedCounter end={4} suffix=" min" prefix="< " />
+              </div>
+              <div className="text-gray-400">Avg Time</div>
+            </div>
           </div>
 
           {/* How It Works */}
@@ -267,6 +288,31 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Live Activity Feed */}
+          <div className="mt-32 grid md:grid-cols-2 gap-8">
+            <div>
+              <h2 className="text-4xl font-bold text-white mb-8">
+                Happening Right Now
+              </h2>
+              <p className="text-gray-400 mb-8">
+                Watch as developers around the world resurrect their projects in real-time
+              </p>
+              <LiveActivityFeed />
+            </div>
+            <div className="flex items-center justify-center">
+              <motion.div
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 5, repeat: Infinity }}
+                className="text-9xl"
+              >
+                👻
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Testimonials */}
+          <Testimonials />
+
           {/* CTA */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -278,13 +324,16 @@ export default function Home() {
               Ready to Bring Your Projects Back to Life?
             </h2>
             <p className="text-xl text-gray-300 mb-8">
-              Join hundreds of developers who've resurrected their dead repos
+              Join 1,247+ developers who've resurrected their dead repos
             </p>
             <button
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onClick={() => {
+                celebrateSuccess();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition text-lg"
             >
-              Start Resurrecting Now
+              Start Resurrecting Now 🎉
             </button>
           </motion.div>
         </motion.div>
