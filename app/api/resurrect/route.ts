@@ -39,10 +39,13 @@ export async function POST(request: NextRequest) {
     const [, owner, repo] = match;
     const repoName = repo.replace('.git', '');
 
+    // Check if GitHub token is available
+    const hasGitHubToken = !!process.env.GITHUB_TOKEN;
+    
     // Initialize services
-    const octokit = new Octokit({
+    const octokit = hasGitHubToken ? new Octokit({
       auth: process.env.GITHUB_TOKEN,
-    });
+    }) : null;
 
     // Create resurrection session
     const sessionId = `resurrection_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -120,26 +123,38 @@ export async function POST(request: NextRequest) {
 }
 
 async function analyzeRepository(
-  octokit: Octokit,
+  octokit: Octokit | null,
   owner: string,
   repo: string,
   scenario: string
 ) {
   // Fetch package.json
   let packageJson = null;
-  try {
-    const { data } = await octokit.repos.getContent({
-      owner,
-      repo,
-      path: 'package.json',
-    });
+  
+  if (octokit) {
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path: 'package.json',
+      });
 
-    if ('content' in data) {
-      const content = Buffer.from(data.content, 'base64').toString();
-      packageJson = JSON.parse(content);
+      if ('content' in data) {
+        const content = Buffer.from(data.content, 'base64').toString();
+        packageJson = JSON.parse(content);
+      }
+    } catch (error) {
+      console.log('No package.json found or GitHub API error');
     }
-  } catch (error) {
-    console.log('No package.json found');
+  } else {
+    // Demo mode without GitHub token
+    packageJson = {
+      name: repo,
+      dependencies: {
+        'react': '^16.0.0',
+        'react-dom': '^16.0.0',
+      }
+    };
   }
 
   return {
@@ -152,7 +167,7 @@ async function analyzeRepository(
     },
     details: `Analyzed ${owner}/${repo}\nScenario: ${scenario}\nDependencies: ${
       packageJson ? Object.keys(packageJson.dependencies || {}).length : 0
-    }`,
+    }${!octokit ? '\n(Demo mode - add GITHUB_TOKEN for real analysis)' : ''}`,
   };
 }
 
