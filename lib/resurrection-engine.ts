@@ -18,6 +18,7 @@ export class ResurrectionEngine {
   private config: ResurrectionConfig;
   private octokit: Octokit;
   private workDir: string;
+  private branchName: string = 'ghost-commit-resurrection';
 
   constructor(config: ResurrectionConfig) {
     this.config = config;
@@ -65,7 +66,7 @@ export class ResurrectionEngine {
       return {
         success: true,
         prUrl,
-        branch: 'ghost-commit-resurrection',
+        branch: this.branchName,
       };
     } catch (error: any) {
       console.error('❌ Resurrection failed:', error.message);
@@ -86,7 +87,12 @@ export class ResurrectionEngine {
 
   private async createBranch() {
     const git = simpleGit(this.workDir);
-    await git.checkoutLocalBranch('ghost-commit-resurrection');
+    
+    // Use a unique branch name with timestamp to avoid conflicts
+    const branchName = `ghost-commit-resurrection-${Date.now()}`;
+    this.branchName = branchName;
+    
+    await git.checkoutLocalBranch(branchName);
   }
 
   private async addStackAuth() {
@@ -288,7 +294,7 @@ Resurrected by Ghost Commit 👻
 
   private async pushChanges() {
     const git = simpleGit(this.workDir);
-    await git.push('origin', 'ghost-commit-resurrection', ['--set-upstream']);
+    await git.push('origin', this.branchName, ['--set-upstream']);
   }
 
   private async createPullRequest() {
@@ -304,7 +310,7 @@ Resurrected by Ghost Commit 👻
       owner: this.config.owner,
       repo: this.config.repo,
       title: '👻 Ghost Commit: Repository Resurrection',
-      head: 'ghost-commit-resurrection',
+      head: this.branchName,
       base: baseBranch,
       body: `# 👻 Repository Resurrected!
 
