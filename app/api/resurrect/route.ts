@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { Octokit } from '@octokit/rest';
 
-const openai = new OpenAI({
+// Only initialize OpenAI if key is available
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 interface ResurrectionStep {
   id: string;
@@ -184,42 +185,47 @@ Create a detailed plan to resurrect this dead project. Include:
 
 Return a JSON object with: { transformations: string[], addAuth: boolean, deploymentStrategy: string }`;
 
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert at modernizing and resurrecting dead code repositories.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
+  // Use OpenAI if available, otherwise use fallback
+  if (openai) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at modernizing and resurrecting dead code repositories.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        response_format: { type: 'json_object' },
+      });
 
-    const plan = JSON.parse(completion.choices[0].message.content || '{}');
+      const plan = JSON.parse(completion.choices[0].message.content || '{}');
 
-    return {
-      success: true,
-      plan: {
-        transformations: plan.transformations || [],
-        addAuth: plan.addAuth || false,
-        deploymentStrategy: plan.deploymentStrategy || 'vercel',
-      },
-      details: `AI Generated Plan:\n${plan.transformations?.slice(0, 5).join('\n') || 'No transformations needed'}`,
-    };
-  } catch (error) {
-    // Fallback plan if OpenAI fails
-    const fallbackPlan = getFallbackPlan(scenario);
-    return {
-      success: true,
-      plan: fallbackPlan,
-      details: `Fallback Plan:\n${fallbackPlan.transformations.slice(0, 5).join('\n')}`,
-    };
+      return {
+        success: true,
+        plan: {
+          transformations: plan.transformations || [],
+          addAuth: plan.addAuth || false,
+          deploymentStrategy: plan.deploymentStrategy || 'vercel',
+        },
+        details: `AI Generated Plan:\n${plan.transformations?.slice(0, 5).join('\n') || 'No transformations needed'}`,
+      };
+    } catch (error) {
+      console.log('OpenAI error, using fallback');
+    }
   }
+  
+  // Fallback plan if OpenAI not available or fails
+  const fallbackPlan = getFallbackPlan(scenario);
+  return {
+    success: true,
+    plan: fallbackPlan,
+    details: `Transformation Plan:\n${fallbackPlan.transformations.slice(0, 5).join('\n')}${!openai ? '\n(Add OPENAI_API_KEY for AI-powered analysis)' : ''}`,
+  };
 }
 
 function getFallbackPlan(scenario: string) {
