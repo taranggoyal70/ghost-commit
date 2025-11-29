@@ -39,13 +39,21 @@ export async function POST(request: NextRequest) {
     const [, owner, repo] = match;
     const repoName = repo.replace('.git', '');
 
-    // Check if GitHub token is available
-    const hasGitHubToken = !!process.env.GITHUB_TOKEN;
+    // Check if required API keys are configured
+    if (!process.env.GITHUB_TOKEN) {
+      return NextResponse.json(
+        { 
+          error: 'GitHub token not configured',
+          details: 'Please add GITHUB_TOKEN to your .env.local file. Get one at: https://github.com/settings/tokens'
+        },
+        { status: 503 }
+      );
+    }
     
     // Initialize services
-    const octokit = hasGitHubToken ? new Octokit({
+    const octokit = new Octokit({
       auth: process.env.GITHUB_TOKEN,
-    }) : null;
+    });
 
     // Create resurrection session
     const sessionId = `resurrection_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -123,38 +131,28 @@ export async function POST(request: NextRequest) {
 }
 
 async function analyzeRepository(
-  octokit: Octokit | null,
+  octokit: Octokit,
   owner: string,
   repo: string,
   scenario: string
 ) {
-  // Fetch package.json
+  // Fetch package.json from real GitHub repo
   let packageJson = null;
   
-  if (octokit) {
-    try {
-      const { data } = await octokit.repos.getContent({
-        owner,
-        repo,
-        path: 'package.json',
-      });
+  try {
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: 'package.json',
+    });
 
-      if ('content' in data) {
-        const content = Buffer.from(data.content, 'base64').toString();
-        packageJson = JSON.parse(content);
-      }
-    } catch (error) {
-      console.log('No package.json found or GitHub API error');
+    if ('content' in data) {
+      const content = Buffer.from(data.content, 'base64').toString();
+      packageJson = JSON.parse(content);
     }
-  } else {
-    // Demo mode without GitHub token
-    packageJson = {
-      name: repo,
-      dependencies: {
-        'react': '^16.0.0',
-        'react-dom': '^16.0.0',
-      }
-    };
+  } catch (error) {
+    console.log('No package.json found or GitHub API error:', error);
+    // Continue without package.json
   }
 
   return {
@@ -167,7 +165,7 @@ async function analyzeRepository(
     },
     details: `Analyzed ${owner}/${repo}\nScenario: ${scenario}\nDependencies: ${
       packageJson ? Object.keys(packageJson.dependencies || {}).length : 0
-    }${!octokit ? '\n(Demo mode - add GITHUB_TOKEN for real analysis)' : ''}`,
+    }\nPackage: ${packageJson?.name || 'Unknown'}`,
   };
 }
 

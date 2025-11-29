@@ -75,7 +75,14 @@ export default function ResurrectLivePage() {
       setResult(data.result);
       celebrateSuccess();
     } catch (err: any) {
-      setError(err.message || 'Failed to resurrect repository');
+      const errorMessage = err.message || 'Failed to resurrect repository';
+      const isConfigError = errorMessage.includes('token') || errorMessage.includes('configured');
+      
+      setError(isConfigError 
+        ? 'API keys not configured. Please add GITHUB_TOKEN to .env.local (see API_KEYS_SETUP.md)'
+        : errorMessage
+      );
+      
       setSteps(prev => prev.map(step => 
         step.status === 'running' ? { ...step, status: 'failed' as const } : step
       ));
