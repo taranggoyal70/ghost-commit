@@ -48,8 +48,8 @@ export default function Repo3DVisualization({ isActive }: { isActive: boolean })
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Update rotation - faster
-      setRotation(prev => (prev + 0.01) % (Math.PI * 2));
+      // Update rotation - smooth and slow
+      setRotation(prev => (prev + 0.003) % (Math.PI * 2));
 
       // Draw connections
       nodes.forEach(node => {
