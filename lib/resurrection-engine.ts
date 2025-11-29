@@ -306,12 +306,13 @@ Resurrected by Ghost Commit 👻
     
     const baseBranch = repoData.default_branch || 'main';
     
-    const { data: pr } = await this.octokit.pulls.create({
-      owner: this.config.owner,
-      repo: this.config.repo,
-      title: '👻 Ghost Commit: Repository Resurrection',
-      head: this.branchName,
-      base: baseBranch,
+    try {
+      const { data: pr } = await this.octokit.pulls.create({
+        owner: this.config.owner,
+        repo: this.config.repo,
+        title: '👻 Ghost Commit: Repository Resurrection',
+        head: this.branchName,
+        base: baseBranch,
       body: `# 👻 Repository Resurrected!
 
 This PR adds modern authentication and updates your project.
@@ -332,9 +333,14 @@ See \`GHOST_COMMIT_CHANGES.md\` for setup instructions.
 
 Resurrected with ❤️ by [Ghost Commit](https://ghostcommit.dev)
 `,
-    });
+      });
 
-    return pr.html_url;
+      return pr.html_url;
+    } catch (error: any) {
+      console.error('PR creation failed:', error.message);
+      console.error('Error details:', error.response?.data);
+      throw new Error(`Failed to create PR: ${error.response?.data?.errors?.[0]?.message || error.message}`);
+    }
   }
 
   private async cleanup() {
