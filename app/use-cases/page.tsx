@@ -17,7 +17,7 @@ interface UseCase {
   icon: any;
   color: string;
   examples: string[];
-  demoRepo: string;
+  demoRepo?: string;
   steps: string[];
 }
 
@@ -34,7 +34,7 @@ const useCases: UseCase[] = [
       "Legacy Redux → Redux Toolkit",
       "Webpack 4 → Webpack 5"
     ],
-    demoRepo: "https://github.com/example/old-react-app",
+    demoRepo: "https://github.com/gothinkster/react-redux-realworld-example-app",
     steps: [
       "Update React 16 → 19",
       "Convert class components to hooks",
@@ -56,7 +56,6 @@ const useCases: UseCase[] = [
       "No login/signup pages",
       "Missing protected routes"
     ],
-    demoRepo: "https://github.com/example/no-auth-app",
     steps: [
       "Install Stack Auth SDK",
       "Create auth pages (login/signup)",
@@ -78,7 +77,6 @@ const useCases: UseCase[] = [
       "getServerSideProps → Server Components",
       "API Routes → Route Handlers"
     ],
-    demoRepo: "https://github.com/example/nextjs-pages",
     steps: [
       "Update Next.js to v14",
       "Create app directory",
@@ -100,7 +98,7 @@ const useCases: UseCase[] = [
       "Runtime errors",
       "Poor IDE support"
     ],
-    demoRepo: "https://github.com/example/js-only-app",
+    demoRepo: "https://github.com/expressjs/express",
     steps: [
       "Install TypeScript",
       "Create tsconfig.json",
@@ -122,7 +120,6 @@ const useCases: UseCase[] = [
       "No HMR (Hot Module Replacement)",
       "Long development startup"
     ],
-    demoRepo: "https://github.com/example/webpack-app",
     steps: [
       "Install Vite",
       "Create vite.config",
@@ -144,7 +141,7 @@ const useCases: UseCase[] = [
       "No data persistence",
       "Mock data everywhere"
     ],
-    demoRepo: "https://github.com/example/no-db-app",
+    demoRepo: "https://github.com/tastejs/todomvc",
     steps: [
       "Install Prisma",
       "Create schema",
@@ -166,7 +163,6 @@ const useCases: UseCase[] = [
       "No Docker setup",
       "Manual deployment"
     ],
-    demoRepo: "https://github.com/example/local-only-app",
     steps: [
       "Create Dockerfile",
       "Set up GitHub Actions",
@@ -188,7 +184,6 @@ const useCases: UseCase[] = [
       "Manual testing only",
       "Frequent bugs"
     ],
-    demoRepo: "https://github.com/example/no-tests-app",
     steps: [
       "Install Jest + RTL",
       "Create test setup",
@@ -210,7 +205,6 @@ const useCases: UseCase[] = [
       "Version sync issues",
       "Complex deployments"
     ],
-    demoRepo: "https://github.com/example/multi-repo",
     steps: [
       "Install Turborepo",
       "Create workspace structure",
@@ -232,7 +226,6 @@ const useCases: UseCase[] = [
       "No component library",
       "Poor design system"
     ],
-    demoRepo: "https://github.com/example/plain-css-app",
     steps: [
       "Install Tailwind CSS",
       "Set up PostCSS",
@@ -249,7 +242,12 @@ export default function UseCasesPage() {
   const [selectedUseCase, setSelectedUseCase] = useState<string | null>(null);
 
   const handleResurrect = (useCase: UseCase) => {
-    router.push(`/resurrect?repo=${encodeURIComponent(useCase.demoRepo)}&scenario=${useCase.id}`);
+    if (useCase.demoRepo) {
+      router.push(`/resurrect?repo=${encodeURIComponent(useCase.demoRepo)}&scenario=${useCase.id}`);
+    } else {
+      // No example repo for this scenario — let the user paste their own
+      router.push("/resurrect");
+    }
   };
 
   return (
