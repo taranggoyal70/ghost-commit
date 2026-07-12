@@ -2,57 +2,25 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Ghost, Github, Sparkles, Zap, Code2, Rocket, CheckCircle2, XCircle, LogOut, Shield } from "lucide-react";
+import { Ghost, Github, Sparkles, Zap, Code2, Search, FileText, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import APIClient from "@/lib/api-client";
 import { useAuth } from "./hooks/useAuth";
-import AnimatedCounter from "./components/AnimatedCounter";
-import LiveActivityFeed from "./components/LiveActivityFeed";
 import TypewriterText from "./components/TypewriterText";
-import Testimonials from "./components/Testimonials";
-import GitHubStatsLive from "./components/GitHubStatsLive";
-import { celebrateSuccess } from "./utils/confetti";
 
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [error, setError] = useState("");
-  
-  // Check if user is signed in
   const { user, app } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
-    if (app) {
-      await app.signOut();
-    }
+    if (app) await app.signOut();
     router.push("/");
   };
 
-  const handleAnalyze = async () => {
-    if (!repoUrl) return;
-    
-    setIsAnalyzing(true);
-    setError("");
-    setAnalysisResult(null);
-    
-    try {
-      const result = await APIClient.analyzeRepository(repoUrl);
-      setAnalysisResult(result);
-      setIsAnalyzing(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to analyze repository");
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleResurrect = async () => {
-    if (!repoUrl) return;
-    
-    const scenario = analysisResult?.recommendations?.scenario || "default";
-    window.location.href = `/resurrect?repo=${encodeURIComponent(repoUrl)}&scenario=${scenario}`;
+  const goResurrect = () => {
+    if (!repoUrl.trim()) return;
+    router.push(`/resurrect?repo=${encodeURIComponent(repoUrl.trim())}`);
   };
 
   return (
@@ -69,12 +37,14 @@ export default function Home() {
               <Link href="/use-cases" className="text-gray-300 hover:text-white transition">
                 Use Cases
               </Link>
-              <Link href="/demo" className="text-gray-300 hover:text-white transition">
-                Demo
-              </Link>
-              <Link href="/insane-demo" className="text-yellow-300 hover:text-yellow-200 transition font-bold">
-                🔥 Insane Demo
-              </Link>
+              <a
+                href="https://github.com/taranggoyal70/ghost-commit"
+                target="_blank"
+                rel="noreferrer"
+                className="text-gray-300 hover:text-white transition"
+              >
+                GitHub
+              </a>
               {user ? (
                 <>
                   <Link href="/dashboard" className="text-gray-300 hover:text-white transition">
@@ -82,7 +52,7 @@ export default function Home() {
                   </Link>
                   <div className="flex items-center space-x-3">
                     <span className="text-sm text-purple-300">
-                      👋 {user.displayName || user.primaryEmail?.split('@')[0]}
+                      👋 {user.displayName || user.primaryEmail?.split("@")[0]}
                     </span>
                     <button
                       onClick={handleSignOut}
@@ -103,7 +73,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -111,7 +81,6 @@ export default function Home() {
           transition={{ duration: 0.8 }}
           className="text-center"
         >
-          {/* Floating Ghost Icon */}
           <motion.div
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 3, repeat: Infinity }}
@@ -128,107 +97,70 @@ export default function Home() {
           </motion.div>
 
           <h1 className="text-6xl md:text-7xl font-bold text-white mb-6">
-            Resurrect Your
+            Analyze &amp; Revive
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 min-h-[1.2em]">
-              <TypewriterText 
-                texts={[
-                  "Dead GitHub Repos",
-                  "Abandoned Projects",
-                  "Legacy Codebases",
-                  "Outdated Apps"
-                ]}
+              <TypewriterText
+                texts={["Dead GitHub Repos", "Abandoned Projects", "Legacy Codebases", "Outdated Apps"]}
               />
             </span>
           </h1>
 
           <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
-            AI-powered resurrection brings your abandoned projects back to life.
-            Updated dependencies, fixed breaking changes, added auth, and deployed—all automatically.
+            Paste a public GitHub repo. Ghost Commit reads the real codebase, uses AI to
+            build a concrete resurrection plan — outdated dependencies, breaking changes,
+            missing auth — and can open a GitHub issue with the plan in one click.
           </p>
 
-          {/* Input Section */}
+          {/* Input */}
           <div className="max-w-2xl mx-auto mb-16">
             <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  placeholder="https://github.com/username/dead-repo"
-                  className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
-                />
-              </div>
-              <Link
-                href={`/resurrect-live?repo=${encodeURIComponent(repoUrl)}`}
-                className={`px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition flex items-center justify-center space-x-2 ${
-                  !repoUrl ? 'opacity-50 pointer-events-none' : ''
-                }`}
+              <input
+                type="text"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && goResurrect()}
+                placeholder="https://github.com/username/dead-repo"
+                className="flex-1 px-6 py-4 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
+              />
+              <button
+                onClick={goResurrect}
+                disabled={!repoUrl.trim()}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition flex items-center justify-center space-x-2 disabled:opacity-50"
               >
-                {isAnalyzing ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Sparkles className="w-5 h-5" />
-                    </motion.div>
-                    <span>Analyzing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-5 h-5" />
-                    <span>Resurrect</span>
-                  </>
-                )}
-              </Link>
+                <Zap className="w-5 h-5" />
+                <span>Analyze</span>
+              </button>
             </div>
-            <div className="mt-6 flex flex-col items-center space-y-3">
-              <Link
-                href="/stack-auth-showcase"
-                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-2 border-purple-500/50 rounded-lg hover:border-purple-400 transition group"
-              >
-                <Shield className="w-5 h-5 text-purple-400 group-hover:scale-110 transition" />
-                <span className="text-white font-semibold">Powered by Stack Auth (YC S24)</span>
-                <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
-              </Link>
-              <p className="text-sm text-gray-400">
-                ✨ Enterprise authentication in 5 minutes • Free for first resurrection
-              </p>
-            </div>
-            <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="mt-6">
               <Link
                 href="/use-cases"
                 className="text-purple-400 hover:text-purple-300 transition text-sm font-semibold"
               >
-                Or browse 10+ resurrection scenarios →
-              </Link>
-              <Link
-                href="/insane-demo"
-                className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-lg transition flex items-center space-x-2 animate-pulse"
-              >
-                <Rocket className="w-5 h-5" />
-                <span>🔥 See Insane Demo</span>
+                Or browse resurrection scenarios →
               </Link>
             </div>
           </div>
 
-          {/* Features Grid */}
+          {/* What it actually does */}
           <div className="grid md:grid-cols-3 gap-8 mt-20">
             {[
               {
-                icon: Code2,
-                title: "Auto-Update Dependencies",
-                description: "Upgrades all packages to latest versions and fixes breaking changes",
+                icon: Search,
+                title: "Real repo analysis",
+                description:
+                  "Reads the actual GitHub repo — language, framework, dependencies, last activity, and detected issues.",
               },
               {
-                icon: Github,
-                title: "Stack Auth Integration",
-                description: "Automatically adds authentication and user management",
+                icon: Sparkles,
+                title: "AI resurrection plan",
+                description:
+                  "GPT-4 turns the analysis into an ordered, concrete plan for modernizing the project.",
               },
               {
-                icon: Rocket,
-                title: "Deploy to Production",
-                description: "Deploys your resurrected app to Vercel instantly",
+                icon: FileText,
+                title: "One-click GitHub issue",
+                description:
+                  "Open a real GitHub issue containing the plan, so the work is tracked where the code lives.",
               },
             ].map((feature, index) => (
               <motion.div
@@ -245,37 +177,15 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Stats - Animated */}
-          <div className="grid grid-cols-3 gap-8 mt-20 max-w-3xl mx-auto">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-purple-400 mb-2">
-                <AnimatedCounter end={1247} suffix="+" />
-              </div>
-              <div className="text-gray-400">Repos Resurrected</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-purple-400 mb-2">
-                <AnimatedCounter end={98} suffix="%" />
-              </div>
-              <div className="text-gray-400">Success Rate</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-purple-400 mb-2">
-                <AnimatedCounter end={4} suffix=" min" prefix="< " />
-              </div>
-              <div className="text-gray-400">Avg Time</div>
-            </div>
-          </div>
-
           {/* How It Works */}
           <div className="mt-32">
             <h2 className="text-4xl font-bold text-white mb-16">How It Works</h2>
             <div className="grid md:grid-cols-4 gap-6">
               {[
-                { step: "1", title: "Paste URL", desc: "Enter your dead repo URL" },
-                { step: "2", title: "AI Analyzes", desc: "Detects issues & creates plan" },
-                { step: "3", title: "Auto-Fix", desc: "Updates code & adds features" },
-                { step: "4", title: "Deploy", desc: "Live app in production" },
+                { step: "1", title: "Paste URL", desc: "Enter any public GitHub repo" },
+                { step: "2", title: "AI analyzes", desc: "Reads the real code & dependencies" },
+                { step: "3", title: "Get a plan", desc: "Concrete, ordered modernization steps" },
+                { step: "4", title: "Open an issue", desc: "Track the plan on the real repo" },
               ].map((item, index) => (
                 <motion.div
                   key={index}
@@ -299,52 +209,25 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Live Activity Feed */}
-          <div className="mt-32 grid md:grid-cols-2 gap-8">
-            <div>
-              <h2 className="text-4xl font-bold text-white mb-8">
-                Happening Right Now
-              </h2>
-              <p className="text-gray-400 mb-8">
-                Watch as developers around the world resurrect their projects in real-time
-              </p>
-              <LiveActivityFeed />
-            </div>
-            <div className="flex items-center justify-center">
-              <motion.div
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 5, repeat: Infinity }}
-                className="text-9xl"
-              >
-                👻
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Testimonials */}
-          <Testimonials />
-
           {/* CTA */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
+            transition={{ delay: 0.6 }}
             className="mt-32 p-12 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-2xl"
           >
             <h2 className="text-4xl font-bold text-white mb-4">
-              Ready to Bring Your Projects Back to Life?
+              Bring a dead repo back to life
             </h2>
             <p className="text-xl text-gray-300 mb-8">
-              Join 1,247+ developers who've resurrected their dead repos
+              Point it at a project you abandoned and see what it would take to revive it.
             </p>
             <button
-              onClick={() => {
-                celebrateSuccess();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition text-lg"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="inline-flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition text-lg"
             >
-              Start Resurrecting Now 🎉
+              <Code2 className="w-5 h-5" />
+              <span>Analyze a repo</span>
             </button>
           </motion.div>
         </motion.div>
@@ -358,8 +241,17 @@ export default function Home() {
               <Ghost className="w-6 h-6 text-purple-400" />
               <span className="text-white font-semibold">Ghost Commit</span>
             </div>
-            <div className="text-gray-400 text-sm">
-              Built for Stack Auth (YC S24) Mini Hackathon • MIT License
+            <div className="flex items-center space-x-4 text-gray-400 text-sm">
+              <a
+                href="https://github.com/taranggoyal70/ghost-commit"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center space-x-1 hover:text-white transition"
+              >
+                <Github className="w-4 h-4" />
+                <span>Source</span>
+              </a>
+              <span>MIT License</span>
             </div>
           </div>
         </div>
