@@ -1,73 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Ghost, Mail, Lock, Github, Chrome, ArrowRight } from "lucide-react";
+import { Ghost, Mail, Lock, Github, Chrome, ArrowRight, Sparkles, Info } from "lucide-react";
 import Link from "next/link";
-import { useStackApp, useUser } from "@stackframe/stack";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../hooks/useAuth";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  
-  const router = useRouter();
-  
-  // Try to get Stack Auth hooks, but handle if not configured
-  let app: any = null;
-  let user: any = null;
-  
-  try {
-    app = useStackApp();
-    user = useUser();
-  } catch (e) {
-    // Stack Auth not configured - demo mode
-  }
 
-  // Redirect if already signed in
-  if (user) {
-    router.push("/dashboard");
-    return null;
-  }
+  const router = useRouter();
+  const { app, user, isConfigured } = useAuth();
+  const authAvailable = isConfigured && !!app;
+
+  // Redirect if already signed in — in an effect, never during render
+  useEffect(() => {
+    if (user) {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!app) return;
     setIsLoading(true);
     setError("");
-    
+
     try {
-      if (app) {
-        await app.signInWithCredential({ email, password });
-        router.push("/dashboard");
-      } else {
-        // Demo mode - simulate sign in
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 1000);
+      const result = (await app.signInWithCredential({ email, password })) as any;
+      if (result && result.status === "error") {
+        setError(result.error?.message || "Failed to sign in");
+        setIsLoading(false);
+        return;
       }
+      router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Failed to sign in");
+      setError(err?.message || "Failed to sign in");
       setIsLoading(false);
     }
   };
 
   const handleOAuthSignIn = async (provider: "github" | "google") => {
+    if (!app) return;
     setIsLoading(true);
     setError("");
-    
+
     try {
-      if (app) {
-        await app.signInWithOAuth(provider);
-      } else {
-        // Demo mode - simulate OAuth
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 1000);
-      }
+      await app.signInWithOAuth(provider);
     } catch (err: any) {
-      setError(err.message || "Failed to sign in");
+      setError(err?.message || "Failed to sign in");
       setIsLoading(false);
     }
   };
@@ -97,6 +82,28 @@ export default function SignInPage() {
         >
           <h2 className="text-2xl font-bold text-white mb-6">Welcome Back</h2>
 
+          {/* Auth not configured — honest notice, no fake sign-in */}
+          {!authAvailable && (
+            <div className="mb-6 p-4 bg-purple-500/10 border border-purple-500/40 rounded-lg text-sm">
+              <div className="flex items-start space-x-3">
+                <Info className="w-5 h-5 text-purple-300 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-purple-100 mb-3">
+                    Authentication isn&apos;t configured on this deployment. You can
+                    still analyze repos without an account —
+                  </p>
+                  <Link
+                    href="/resurrect"
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Analyze a Repo</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
@@ -108,17 +115,17 @@ export default function SignInPage() {
           <div className="space-y-3 mb-6">
             <button
               onClick={() => handleOAuthSignIn("github")}
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition flex items-center justify-center space-x-2 disabled:opacity-50"
+              disabled={isLoading || !authAvailable}
+              className="w-full px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Github className="w-5 h-5" />
               <span>Continue with GitHub</span>
             </button>
-            
+
             <button
               onClick={() => handleOAuthSignIn("google")}
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-white hover:bg-gray-100 text-gray-900 rounded-lg transition flex items-center justify-center space-x-2 disabled:opacity-50"
+              disabled={isLoading || !authAvailable}
+              className="w-full px-4 py-3 bg-white hover:bg-gray-100 text-gray-900 rounded-lg transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Chrome className="w-5 h-5" />
               <span>Continue with Google</span>
@@ -137,105 +144,85 @@ export default function SignInPage() {
 
           {/* Email/Password Form */}
           <form onSubmit={handleSignIn} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
+            <fieldset disabled={!authAvailable} className="space-y-4 disabled:opacity-50">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center text-gray-300">
-                <input type="checkbox" className="mr-2 rounded" />
-                Remember me
-              </label>
-              <Link href="/forgot-password" className="text-purple-400 hover:text-purple-300">
-                Forgot password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition flex items-center justify-center space-x-2 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Ghost className="w-5 h-5" />
-                  </motion.div>
-                  <span>Signing in...</span>
-                </>
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
+              <button
+                type="submit"
+                disabled={isLoading || !authAvailable}
+                className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Ghost className="w-5 h-5" />
+                    </motion.div>
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            </fieldset>
           </form>
 
           {/* Sign Up Link */}
           <p className="mt-6 text-center text-gray-400">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/signup" className="text-purple-400 hover:text-purple-300 font-semibold">
               Sign up
             </Link>
           </p>
         </motion.div>
 
-        {/* Features */}
+        {/* Footer note — honest, no invented stats */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
           className="mt-8 text-center"
         >
-          <p className="text-gray-400 text-sm mb-4">Trusted by developers worldwide</p>
-          <div className="flex justify-center space-x-8 text-gray-500 text-sm">
-            <div>
-              <div className="text-2xl font-bold text-white">1,000+</div>
-              <div>Repos Resurrected</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white">95%</div>
-              <div>Success Rate</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white">&lt;5min</div>
-              <div>Average Time</div>
-            </div>
-          </div>
+          <p className="text-gray-400 text-sm">
+            AI-powered GitHub repo analysis and resurrection planning.
+          </p>
         </motion.div>
       </div>
     </div>
