@@ -206,6 +206,18 @@ export async function POST(request: NextRequest) {
 
     const isDead = daysSinceLastCommit && daysSinceLastCommit > 180; // 6 months
 
+    // Derive an honest analysis-time estimate from what we actually found:
+    // more detected issues (and outdated dependencies weigh extra) => longer estimate.
+    const outdatedDepCount = issues
+      .filter((issue: any) => issue.type === 'outdated-dependencies')
+      .reduce((sum: number, issue: any) => sum + (issue.items?.length || 0), 0);
+    const complexityScore = issues.length + outdatedDepCount;
+    const estimatedMinutes = Math.max(1, Math.min(15, 1 + complexityScore));
+    const estimatedTime =
+      complexityScore === 0
+        ? 'under 1 minute'
+        : `${estimatedMinutes}-${estimatedMinutes + 2} minutes`;
+
     return NextResponse.json({
       success: true,
       repository: {
@@ -238,7 +250,7 @@ export async function POST(request: NextRequest) {
       recommendations: {
         scenario: detectedScenario,
         priority: isDead ? 'high' : 'medium',
-        estimatedTime: '3-5 minutes',
+        estimatedTime,
       },
     });
   } catch (error: any) {
