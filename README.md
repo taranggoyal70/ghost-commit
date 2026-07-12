@@ -1,61 +1,51 @@
-# 👻 Ghost Commit - AI-Powered Repo Resurrection
+# 👻 Ghost Commit — AI GitHub Repo Analyzer & Resurrection Planner
 
-> *"This project was dead. Now it's alive. And it can resurrect yours too."*
+> *Point it at a dead GitHub repo. Get a real, AI-generated plan to bring it back — and open a GitHub issue to track it.*
 
-**AI-Powered GitHub Repository Resurrection**
+Ghost Commit reads a **real** public GitHub repository, analyzes what has gone
+stale, uses AI to produce a concrete resurrection plan, and can open a **real
+GitHub issue** with that plan so the work lives where the code does.
 
-Built for the Post-Thanksgiving Mini Hackathon @ Stacker House.
+## 🎯 What it actually does
 
-## 🎯 What It Does
+- 🔍 **Real analysis** — fetches the repo, `package.json`, dependencies, last
+  commit and open issues via the GitHub API, and detects concrete problems
+  (outdated framework, aging dependencies, missing auth, long inactivity).
+- 🧠 **AI resurrection plan** — turns that analysis into an ordered, actionable
+  plan with OpenAI (`gpt-4o`). No key? You still get a transparent, clearly
+  labelled heuristic plan.
+- 📝 **One-click GitHub issue** — opens a genuine issue on the repo containing
+  the plan (requires a `GITHUB_TOKEN` with write access).
 
-Ghost Commit automatically analyzes, modernizes, and revives dead GitHub repositories using AI.
+There is **no fake data, no simulated progress, and no invented metrics** — the
+UI only shows what the APIs actually return, and every link is real.
 
-- 🔍 Analyzing outdated codebases
-- 🔄 Updating all dependencies to latest versions
-- 🔧 Fixing breaking changes automatically
-- 🔐 Adding Stack Auth authentication
-- 🚀 Deploying to production
-- 📝 Generating comprehensive documentation
+## 🏗️ Tech stack
 
-## 🏆 The Meta Story:
+Next.js 14 (App Router) · React 18 · TypeScript · Tailwind CSS · Framer Motion ·
+GitHub API (Octokit) · OpenAI · optional [Stack Auth](https://stack-auth.com) for login · Vercel.
 
-Ghost Commit itself was a dormant idea I started months ago and abandoned. For this hackathon, I'm reviving it - bringing my own dead project back to life. It's the perfect meta demonstration of what the tool does.
-
-## ⚡ Quick Start
+## ⚡ Quick start
 
 ```bash
-# Clone the repo
-git clone https://github.com/yourusername/ghost-commit.git
+git clone https://github.com/taranggoyal70/ghost-commit.git
 cd ghost-commit
-
-# Install dependencies
 npm install
-
-# Set up environment variables
-cp .env.example .env
-
-# Run development server
+cp .env.example .env.local   # then fill in keys (all optional to start)
 npm run dev
 ```
 
-## 🏗️ Tech Stack
+Open http://localhost:3000 and paste a public repo URL.
 
-- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS, Framer Motion
-- **Backend**: Next.js API Routes
-- **Auth**: [Stack Auth](https://stack-auth.com) (Y Combinator S24) 🚀
-- **AI**: OpenAI GPT-4
-- **APIs**: GitHub API (Octokit), OpenAI API
-- **Deployment**: Vercel
-- **Styling**: Tailwind CSS, Glassmorphism UI
+## 🔑 Environment variables
 
-## 🎬 Demo
+All are optional — the analyzer works on public repos with **zero config**:
 
-[Live Demo](https://ghostcommit.vercel.app)
-
-## 🏆 Hackathon Submission
-
-Built in 6 hours for Stack Auth Mini Hackathon
-Theme: Revive a Dead Project
+| Variable | Required? | Purpose |
+| --- | --- | --- |
+| `GITHUB_TOKEN` | Optional | Higher rate limits, private repos, and **creating issues**. Without it, public-repo analysis still works (unauthenticated, rate-limited). |
+| `OPENAI_API_KEY` | Optional | Enables the AI-generated plan. Without it, a labelled heuristic plan is used. |
+| `NEXT_PUBLIC_STACK_PROJECT_ID` / `NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY` / `STACK_SECRET_SERVER_KEY` | Optional | Enable sign-in via Stack Auth. Without them, the app runs fully without accounts. |
 
 ## 📄 License
 
