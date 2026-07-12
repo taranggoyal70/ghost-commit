@@ -1,354 +1,453 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Suspense, FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Ghost, CheckCircle2, XCircle, Loader2, 
-  Code2, Package, Shield, Rocket, GitBranch,
-  Sparkles, Zap, ExternalLink
+import { motion } from "framer-motion";
+import {
+  Ghost, CheckCircle2, XCircle, Loader2,
+  Code2, Package, GitBranch, Sparkles, ExternalLink,
+  AlertTriangle, Calendar, Star, ListChecks,
 } from "lucide-react";
-import APIClient from "@/lib/api-client";
 
-interface ResurrectionStep {
-  id: string;
-  title: string;
-  description: string;
-  status: "pending" | "running" | "completed" | "failed";
-  icon: any;
-  details?: string;
+interface DetectedIssue {
+  type: string;
+  severity: "high" | "medium" | "low";
+  message: string;
 }
 
-const scenarioSteps: Record<string, ResurrectionStep[]> = {
-  "outdated-react": [
-    { id: "analyze", title: "Analyzing React Version", description: "Detecting React 16/17 patterns", status: "pending", icon: Code2 },
-    { id: "update-react", title: "Updating to React 19", description: "Upgrading React and ReactDOM", status: "pending", icon: Package },
-    { id: "hooks", title: "Converting to Hooks", description: "Migrating class components", status: "pending", icon: Zap },
-    { id: "router", title: "Updating React Router", description: "Migrating to v6", status: "pending", icon: GitBranch },
-    { id: "deploy", title: "Deploying", description: "Deploying to Vercel", status: "pending", icon: Rocket },
-  ],
-  "no-auth": [
-    { id: "analyze", title: "Analyzing App Structure", description: "Detecting authentication needs", status: "pending", icon: Code2 },
-    { id: "install-auth", title: "Installing Stack Auth", description: "Adding Stack Auth SDK", status: "pending", icon: Package },
-    { id: "auth-pages", title: "Creating Auth Pages", description: "Building login/signup pages", status: "pending", icon: Shield },
-    { id: "protected", title: "Adding Protected Routes", description: "Securing private pages", status: "pending", icon: Shield },
-    { id: "deploy", title: "Deploying", description: "Deploying to Vercel", status: "pending", icon: Rocket },
-  ],
-  "nextjs-migration": [
-    { id: "analyze", title: "Analyzing Next.js Version", description: "Detecting Pages Router", status: "pending", icon: Code2 },
-    { id: "update-next", title: "Updating Next.js", description: "Upgrading to v14", status: "pending", icon: Package },
-    { id: "app-router", title: "Creating App Directory", description: "Setting up App Router", status: "pending", icon: GitBranch },
-    { id: "migrate-pages", title: "Migrating Pages", description: "Converting to Server Components", status: "pending", icon: Zap },
-    { id: "api-routes", title: "Updating API Routes", description: "Converting to Route Handlers", status: "pending", icon: Code2 },
-    { id: "deploy", title: "Deploying", description: "Deploying to Vercel", status: "pending", icon: Rocket },
-  ],
-  "default": [
-    { id: "analyze", title: "Analyzing Repository", description: "Cloning and analyzing codebase", status: "pending", icon: Code2 },
-    { id: "dependencies", title: "Updating Dependencies", description: "Upgrading packages", status: "pending", icon: Package },
-    { id: "breaking", title: "Fixing Breaking Changes", description: "AI-powered transformation", status: "pending", icon: Zap },
-    { id: "auth", title: "Adding Stack Auth", description: "Integrating authentication", status: "pending", icon: Shield },
-    { id: "deploy", title: "Deploying to Production", description: "Deploying to Vercel", status: "pending", icon: Rocket },
-    { id: "pr", title: "Creating Pull Request", description: "Generating PR", status: "pending", icon: GitBranch },
-  ]
+interface PlanStep {
+  title: string;
+  description: string;
+}
+
+interface ResurrectResult {
+  repo: {
+    owner: string;
+    name: string;
+    fullName: string;
+    description: string | null;
+    url: string;
+  };
+  analysis: {
+    language: string;
+    framework: string;
+    lastCommit: string | null;
+    daysSinceLastCommit: number | null;
+    dependencyCount: number;
+    devDependencyCount: number;
+    stars: number;
+    openIssues: number;
+    issues: DetectedIssue[];
+  };
+  plan: {
+    source: string;
+    steps: PlanStep[];
+  };
+  aiPowered: boolean;
+}
+
+const severityStyles: Record<DetectedIssue["severity"], string> = {
+  high: "bg-red-500/10 border-red-500/30 text-red-300",
+  medium: "bg-yellow-500/10 border-yellow-500/30 text-yellow-300",
+  low: "bg-white/5 border-white/10 text-gray-300",
 };
 
-export default function ResurrectPage() {
+function ResurrectPageInner() {
   const searchParams = useSearchParams();
-  const repoUrl = searchParams.get("repo") || "";
-  const scenario = searchParams.get("scenario") || "default";
-  
-  const [isResurrecting, setIsResurrecting] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [deployedUrl, setDeployedUrl] = useState("");
-  const [githubPrUrl, setGithubPrUrl] = useState("");
-  
-  const [steps, setSteps] = useState<ResurrectionStep[]>(
-    scenarioSteps[scenario] || scenarioSteps["default"]
-  );
+  const initialRepo = searchParams.get("repo") || "";
 
-  const startResurrection = async () => {
-    setIsResurrecting(true);
-    
+  const [repoInput, setRepoInput] = useState(initialRepo);
+  const [analyzedRepo, setAnalyzedRepo] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<ResurrectResult | null>(null);
+
+  const [isCreatingIssue, setIsCreatingIssue] = useState(false);
+  const [issueUrl, setIssueUrl] = useState<string | null>(null);
+  const [issueError, setIssueError] = useState<string | null>(null);
+
+  const runAnalysis = useCallback(async (repoUrl: string) => {
+    setIsLoading(true);
+    setError(null);
+    setResult(null);
+    setIssueUrl(null);
+    setIssueError(null);
+    setAnalyzedRepo(repoUrl);
+
     try {
-      // Try to call real API, but fall back to demo mode if it fails
-      let result;
-      try {
-        result = await APIClient.startResurrection(repoUrl, scenario);
-      } catch (apiError) {
-        console.log('API not available, using demo mode');
-        // Demo mode - use current steps
-        result = null;
-      }
-      
-      // Animate through the steps
-      const stepsToUse = result?.steps || steps;
-      
-      for (let i = 0; i < stepsToUse.length; i++) {
-        setCurrentStep(i);
-        
-        const apiStep = result?.steps?.[i];
-        
-        // Update step to running
-        setSteps(prev => prev.map((step, idx) => 
-          idx === i ? { 
-            ...step, 
-            status: "running",
-            title: apiStep?.title || step.title,
-          } : step
-        ));
-        
-        // Simulate processing time for visual effect
-        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1500));
-        
-        // Update step to completed with real details
-        setSteps(prev => prev.map((step, idx) => 
-          idx === i ? { 
-            ...step, 
-            status: "completed",
-            title: apiStep?.title || step.title,
-            details: apiStep?.details || getStepDetails(step.id)
-          } : step
-        ));
-      }
-      
-      // Set deployed URL from API result or generate demo URL
-      if (result?.result?.deploymentUrl) {
-        setDeployedUrl(result.result.deploymentUrl);
-      } else {
-        setDeployedUrl(`https://${repoUrl.split('/').pop()?.replace('.git', '')}-resurrected.vercel.app`);
-      }
-      
-      if (result?.result?.prUrl) {
-        setGithubPrUrl(result.result.prUrl);
-      } else {
-        setGithubPrUrl(`${repoUrl}/pull/1`);
-      }
-      
-      setIsResurrecting(false);
-    } catch (error: any) {
-      console.error('Resurrection failed:', error);
-      
-      // Mark current step as failed
-      setSteps(prev => prev.map((step, idx) => 
-        idx === currentStep ? { ...step, status: "failed", details: error.message } : step
-      ));
-      
-      setIsResurrecting(false);
-    }
-  };
+      const response = await fetch("/api/resurrect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoUrl }),
+      });
 
-  const getStepDetails = (stepId: string): string => {
-    const details: Record<string, string> = {
-      analyze: "✓ Detected Next.js 12 project\n✓ Found 47 outdated dependencies\n✓ Identified 12 breaking changes",
-      dependencies: "✓ Updated React 17 → 19\n✓ Updated Next.js 12 → 15\n✓ Updated 45 other packages",
-      breaking: "✓ Fixed 12 API changes\n✓ Updated deprecated hooks\n✓ Migrated to App Router",
-      auth: "✓ Installed Stack Auth SDK\n✓ Created auth pages\n✓ Added protected routes",
-      deploy: "✓ Built successfully\n✓ Deployed to Vercel\n✓ Custom domain configured",
-      pr: "✓ Created comprehensive PR\n✓ Added migration guide\n✓ Documented all changes",
-    };
-    return details[stepId] || "";
-  };
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.details ? `${data.error}: ${data.details}` : data.error || "Request failed");
+        return;
+      }
+
+      setResult(data as ResurrectResult);
+    } catch (err: any) {
+      setError(err.message || "Network error — could not reach /api/resurrect");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (repoUrl) {
-      startResurrection();
+    if (initialRepo) {
+      runAnalysis(initialRepo);
     }
-  }, [repoUrl]);
+  }, [initialRepo, runAnalysis]);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (repoInput.trim() && !isLoading) {
+      runAnalysis(repoInput.trim());
+    }
+  };
+
+  const createIssue = async () => {
+    if (!result) return;
+    setIsCreatingIssue(true);
+    setIssueError(null);
+
+    try {
+      const response = await fetch("/api/create-issue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repoUrl: analyzedRepo,
+          analysis: {
+            framework: result.analysis.framework,
+            dependencies: result.analysis.dependencyCount,
+            issues: result.analysis.issues.map((issue) => ({
+              message: issue.message,
+              severity: issue.severity,
+              recommendation:
+                result.plan.steps.find((s) =>
+                  s.description.toLowerCase().includes(issue.type.replace(/-/g, " "))
+                )?.title || "See resurrection plan",
+            })),
+            recommendations: {
+              topActions: result.plan.steps.map(
+                (step) => `${step.title} — ${step.description}`
+              ),
+            },
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setIssueError(
+          data.details ? `${data.error}: ${data.details}` : data.error || "Failed to create issue"
+        );
+        return;
+      }
+
+      setIssueUrl(data.issue.url);
+    } catch (err: any) {
+      setIssueError(err.message || "Network error — could not reach /api/create-issue");
+    } finally {
+      setIsCreatingIssue(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
       {/* Header */}
       <div className="border-b border-white/10 backdrop-blur-sm bg-black/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Ghost className="w-8 h-8 text-purple-400 animate-float" />
-              <div>
-                <h1 className="text-2xl font-bold text-white">Resurrecting Repository</h1>
-                <p className="text-sm text-gray-400 truncate max-w-md">{repoUrl}</p>
-              </div>
+          <div className="flex items-center space-x-3">
+            <Ghost className="w-8 h-8 text-purple-400 animate-float" />
+            <div>
+              <h1 className="text-2xl font-bold text-white">Resurrection Plan</h1>
+              <p className="text-sm text-gray-400">
+                Real repo analysis + an AI plan you can turn into a GitHub issue
+              </p>
             </div>
-            {deployedUrl && (
-              <a
-                href={deployedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition flex items-center space-x-2"
-              >
-                <ExternalLink className="w-5 h-5" />
-                <span>View Live App</span>
-              </a>
-            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Progress Overview */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">
-              {isResurrecting ? "Resurrection in Progress..." : "Resurrection Complete! 🎉"}
-            </h2>
-            <div className="text-purple-400 font-semibold">
-              {currentStep + 1} / {steps.length}
-            </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-purple-600 to-pink-600"
-              initial={{ width: "0%" }}
-              animate={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-              transition={{ duration: 0.5 }}
+        {/* Repo input */}
+        <form onSubmit={handleSubmit} className="mb-10">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="url"
+              value={repoInput}
+              onChange={(e) => setRepoInput(e.target.value)}
+              placeholder="https://github.com/owner/repo"
+              required
+              className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
             />
-          </div>
-        </div>
-
-        {/* Steps */}
-        <div className="space-y-4">
-          {steps.map((step, index) => (
-            <motion.div
-              key={step.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={`p-6 rounded-xl border transition-all ${
-                step.status === "completed"
-                  ? "bg-green-500/10 border-green-500/30"
-                  : step.status === "running"
-                  ? "bg-purple-500/10 border-purple-500/30 shadow-lg shadow-purple-500/20"
-                  : step.status === "failed"
-                  ? "bg-red-500/10 border-red-500/30"
-                  : "bg-white/5 border-white/10"
-              }`}
+            <button
+              type="submit"
+              disabled={isLoading || !repoInput.trim()}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center space-x-2"
             >
-              <div className="flex items-start space-x-4">
-                {/* Icon */}
-                <div className={`p-3 rounded-lg ${
-                  step.status === "completed"
-                    ? "bg-green-500/20"
-                    : step.status === "running"
-                    ? "bg-purple-500/20"
-                    : "bg-gray-500/20"
-                }`}>
-                  {step.status === "completed" ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-400" />
-                  ) : step.status === "running" ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Loader2 className="w-6 h-6 text-purple-400" />
-                    </motion.div>
-                  ) : step.status === "failed" ? (
-                    <XCircle className="w-6 h-6 text-red-400" />
-                  ) : (
-                    <step.icon className="w-6 h-6 text-gray-400" />
-                  )}
-                </div>
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Sparkles className="w-5 h-5" />
+              )}
+              <span>{isLoading ? "Analyzing..." : "Analyze"}</span>
+            </button>
+          </div>
+        </form>
 
-                {/* Content */}
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-white">{step.title}</h3>
-                    {step.status === "running" && (
-                      <div className="flex items-center space-x-2 text-purple-400 text-sm">
-                        <Sparkles className="w-4 h-4 animate-pulse" />
-                        <span>Processing...</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-gray-400 text-sm mb-3">{step.description}</p>
-                  
-                  {/* Details */}
-                  <AnimatePresence>
-                    {step.details && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-3 p-3 bg-black/30 rounded-lg"
-                      >
-                        <pre className="text-xs text-green-400 font-mono whitespace-pre-line">
-                          {step.details}
-                        </pre>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Success Card */}
-        {!isResurrecting && deployedUrl && (
+        {/* Loading */}
+        {isLoading && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-12 p-8 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-2xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-20 text-center"
           >
-            <div className="text-center">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", duration: 0.6 }}
-                className="inline-block mb-6"
-              >
-                <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center">
-                  <CheckCircle2 className="w-12 h-12 text-white" />
-                </div>
-              </motion.div>
-              
-              <h2 className="text-3xl font-bold text-white mb-4">
-                🎉 Repository Resurrected Successfully!
-              </h2>
-              <p className="text-gray-300 mb-8">
-                Your dead project is now alive and deployed to production
-              </p>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            >
+              <Loader2 className="w-10 h-10 text-purple-400" />
+            </motion.div>
+            <p className="mt-4 text-gray-300 font-medium">
+              Analyzing {analyzedRepo}
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              Fetching repository data from GitHub and generating a plan…
+            </p>
+          </motion.div>
+        )}
 
-              <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                <a
-                  href={deployedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition flex items-center justify-center space-x-2"
-                >
-                  <Rocket className="w-5 h-5" />
-                  <span>View Live App</span>
-                </a>
-                <a
-                  href={githubPrUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold rounded-lg transition flex items-center justify-center space-x-2"
-                >
-                  <GitBranch className="w-5 h-5" />
-                  <span>View Pull Request</span>
-                </a>
-              </div>
-
-              <div className="mt-8 p-4 bg-black/30 rounded-lg">
-                <p className="text-sm text-gray-400 mb-2">Share your resurrection:</p>
-                <div className="flex items-center justify-center space-x-2">
-                  <code className="px-3 py-2 bg-black/50 rounded text-purple-400 text-sm">
-                    {deployedUrl}
-                  </code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(deployedUrl)}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition text-sm"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
+        {/* Error */}
+        {error && !isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-6 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start space-x-4"
+          >
+            <XCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-1">Analysis failed</h3>
+              <p className="text-red-300 text-sm whitespace-pre-line">{error}</p>
             </div>
           </motion.div>
         )}
+
+        {/* Results */}
+        {result && !isLoading && (
+          <div className="space-y-8">
+            {/* Repository card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-6 bg-white/5 border border-white/10 rounded-xl"
+            >
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <a
+                    href={result.repo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xl font-bold text-white hover:text-purple-300 transition inline-flex items-center gap-2"
+                  >
+                    {result.repo.fullName}
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  {result.repo.description && (
+                    <p className="text-gray-400 text-sm mt-1">{result.repo.description}</p>
+                  )}
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                    result.aiPowered
+                      ? "bg-purple-500/20 border-purple-500/40 text-purple-300"
+                      : "bg-yellow-500/10 border-yellow-500/30 text-yellow-300"
+                  }`}
+                >
+                  {result.plan.source}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div className="flex items-center space-x-2 text-sm text-gray-300">
+                  <Code2 className="w-4 h-4 text-purple-400" />
+                  <span>{result.analysis.framework}</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-300">
+                  <Package className="w-4 h-4 text-purple-400" />
+                  <span>
+                    {result.analysis.dependencyCount} deps
+                    {result.analysis.devDependencyCount > 0 &&
+                      ` (+${result.analysis.devDependencyCount} dev)`}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-300">
+                  <Calendar className="w-4 h-4 text-purple-400" />
+                  <span>
+                    {result.analysis.lastCommit
+                      ? `Last commit ${result.analysis.daysSinceLastCommit}d ago`
+                      : "No commits found"}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-300">
+                  <Star className="w-4 h-4 text-purple-400" />
+                  <span>{result.analysis.stars} stars</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Detected issues */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                Detected Issues ({result.analysis.issues.length})
+              </h2>
+              {result.analysis.issues.length === 0 ? (
+                <p className="text-gray-400 text-sm p-4 bg-white/5 border border-white/10 rounded-xl">
+                  No issues detected from the available repository data.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {result.analysis.issues.map((issue, idx) => (
+                    <div
+                      key={`${issue.type}-${idx}`}
+                      className={`p-4 rounded-lg border flex items-center justify-between gap-4 ${severityStyles[issue.severity]}`}
+                    >
+                      <span className="text-sm">{issue.message}</span>
+                      <span className="text-xs uppercase font-semibold tracking-wide opacity-70 flex-shrink-0">
+                        {issue.severity}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+
+            {/* Resurrection plan */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <ListChecks className="w-5 h-5 text-purple-400" />
+                Resurrection Plan
+              </h2>
+              <div className="space-y-4">
+                {result.plan.steps.map((step, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 + index * 0.08 }}
+                    className="p-5 bg-white/5 border border-white/10 rounded-xl flex items-start space-x-4"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-300 font-bold flex items-center justify-center flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold">{step.title}</h3>
+                      {step.description && (
+                        <p className="text-gray-400 text-sm mt-1">{step.description}</p>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Primary action: create real GitHub issue */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="p-6 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-2xl"
+            >
+              {issueUrl ? (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle2 className="w-6 h-6 text-green-400" />
+                    <p className="text-white font-medium">
+                      Issue created on {result.repo.fullName}
+                    </p>
+                  </div>
+                  <a
+                    href={issueUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition flex items-center space-x-2"
+                  >
+                    <ExternalLink className="w-5 h-5" />
+                    <span>View Issue</span>
+                  </a>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-white font-semibold">Turn this plan into action</h3>
+                    <p className="text-gray-400 text-sm mt-1">
+                      Creates a real GitHub issue on {result.repo.fullName} containing this plan.
+                    </p>
+                  </div>
+                  <button
+                    onClick={createIssue}
+                    disabled={isCreatingIssue}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center space-x-2 flex-shrink-0"
+                  >
+                    {isCreatingIssue ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <GitBranch className="w-5 h-5" />
+                    )}
+                    <span>
+                      {isCreatingIssue ? "Creating issue..." : "Create GitHub issue with this plan"}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {issueError && (
+                <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start space-x-3">
+                  <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-300 text-sm whitespace-pre-line">{issueError}</p>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && !error && !result && (
+          <div className="text-center py-16 text-gray-500">
+            <Ghost className="w-12 h-12 mx-auto mb-4 text-purple-400/40" />
+            <p>Enter a public GitHub repository URL to analyze it and generate a resurrection plan.</p>
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function ResurrectPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+        </div>
+      }
+    >
+      <ResurrectPageInner />
+    </Suspense>
   );
 }

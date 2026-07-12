@@ -1,27 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { Octokit } from '@octokit/rest';
-import { ResurrectionEngine } from '@/lib/resurrection-engine';
 
 // Only initialize OpenAI if key is available
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}) : null;
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
-// Enable real modifications (set to true for actual GitHub changes)
-const USE_REAL_ENGINE = false; // Demo mode - safer for hackathon!
+interface DetectedIssue {
+  type: string;
+  severity: 'high' | 'medium' | 'low';
+  message: string;
+}
 
-interface ResurrectionStep {
-  id: string;
+interface PlanStep {
   title: string;
   description: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  details?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { repoUrl, scenario } = await request.json();
+    const { repoUrl } = await request.json();
 
     if (!repoUrl) {
       return NextResponse.json(
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (!match) {
       return NextResponse.json(
-        { error: 'Invalid GitHub URL' },
+        { error: 'Invalid GitHub URL. Expected format: https://github.com/owner/repo' },
         { status: 400 }
       );
     }
@@ -44,194 +43,219 @@ export async function POST(request: NextRequest) {
     const [, owner, repo] = match;
     const repoName = repo.replace('.git', '');
 
-    // Check if required API keys are configured
-    if (!process.env.GITHUB_TOKEN) {
+    // GITHUB_TOKEN is optional: with it we get higher rate limits and can read
+    // private repos; without it we fall back to unauthenticated access, which
+    // still works for public repositories (at GitHub's lower rate limit).
+    const octokit = new Octokit(
+      process.env.GITHUB_TOKEN ? { auth: process.env.GITHUB_TOKEN } : {}
+    );
+
+    // --- Fetch REAL repository data ---
+    let repoData;
+    try {
+      const response = await octokit.repos.get({ owner, repo: repoName });
+      repoData = response.data;
+    } catch (error: any) {
+      const status = error.status === 404 ? 400 : 500;
       return NextResponse.json(
-        { 
-          error: 'GitHub token not configured',
-          details: 'Please add GITHUB_TOKEN to your .env.local file. Get one at: https://github.com/settings/tokens'
+        {
+          error:
+            error.status === 404
+              ? `Repository ${owner}/${repoName} not found (or not accessible with this token)`
+              : 'Failed to fetch repository from GitHub',
+          details: error.message,
         },
-        { status: 503 }
+        { status }
       );
     }
-    
-    // Initialize services
-    const octokit = new Octokit({
-      auth: process.env.GITHUB_TOKEN,
-    });
 
-    // Create resurrection session
-    const sessionId = `resurrection_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Fetch package.json (may not exist — that's fine, we report what we find)
+    let packageJson: any = null;
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo: repoName,
+        path: 'package.json',
+      });
+      if ('content' in data) {
+        packageJson = JSON.parse(Buffer.from(data.content, 'base64').toString());
+      }
+    } catch {
+      // No package.json — not an error, just less data
+    }
 
-    // Check if we should use real engine
-    if (USE_REAL_ENGINE) {
-      // REAL MODE: Actually modify the repository
-      try {
-        const engine = new ResurrectionEngine({
-          owner,
-          repo: repoName,
-          scenario,
-          githubToken: process.env.GITHUB_TOKEN!,
-        });
-
-        const result = await engine.resurrect();
-
-        return NextResponse.json({
-          success: true,
-          sessionId,
-          realMode: true,
-          steps: [
-            {
-              id: 'analyze',
-              title: 'Repository Analyzed',
-              status: 'completed',
-              details: `Analyzed ${owner}/${repoName}\nCloned repository successfully`,
-            },
-            {
-              id: 'plan',
-              title: 'Transformation Plan Generated',
-              status: 'completed',
-              details: 'Created comprehensive modernization plan',
-            },
-            {
-              id: 'transform',
-              title: 'Code Transformed',
-              status: 'completed',
-              details: 'Modified files and updated dependencies',
-            },
-            {
-              id: 'auth',
-              title: '🔐 Stack Auth Integration Complete (YC S24)',
-              status: 'completed',
-              details: `✅ Installed @stackframe/stack (Y Combinator S24)
-✅ Created /signin and /signup pages
-✅ Added protected route middleware
-✅ Configured Google OAuth
-✅ Configured GitHub OAuth
-✅ Set up user session management
-✅ Added authentication context
-✅ Integrated with existing app
-
-Stack Auth Features Added:
-• Email/Password authentication
-• Google OAuth sign-in
-• GitHub OAuth sign-in
-• Protected dashboard routes
-• User profile management
-• Session persistence
-• Secure token storage
-
-Ready for production deployment!`,
-            },
-            {
-              id: 'deploy',
-              title: 'Changes Pushed & PR Created',
-              status: 'completed',
-              details: `✅ Created branch: ${result.branch}
-✅ Committed all changes
-✅ Pushed to GitHub
-✅ Pull Request created
-
-Review your changes at: ${result.prUrl}`,
-            },
-          ],
-          result: {
-            transformations: [
-              'Added Stack Auth integration',
-              'Created authentication pages',
-              'Updated package.json',
-              'Added OAuth configuration',
-              'Created documentation',
-            ],
-            filesModified: [
-              'package.json',
-              'stack.ts',
-              'app/signin/page.tsx',
-              'app/signup/page.tsx',
-              'GHOST_COMMIT_CHANGES.md',
-            ],
-            deploymentUrl: `https://${repoName}-resurrected.vercel.app`,
-            prUrl: result.prUrl,
-          },
-        });
-      } catch (error: any) {
-        console.error('Real engine error:', error);
-        // Fall back to demo mode if real mode fails
-        return NextResponse.json(
-          {
-            error: 'Failed to modify repository',
-            details: error.message,
-            hint: 'Make sure your GitHub token has write permissions',
-          },
-          { status: 500 }
+    // Last commit
+    let lastCommit: string | null = null;
+    let daysSinceLastCommit: number | null = null;
+    try {
+      const { data: commits } = await octokit.repos.listCommits({
+        owner,
+        repo: repoName,
+        per_page: 1,
+      });
+      lastCommit = commits[0]?.commit.author?.date ?? null;
+      if (lastCommit) {
+        daysSinceLastCommit = Math.floor(
+          (Date.now() - new Date(lastCommit).getTime()) / (1000 * 60 * 60 * 24)
         );
+      }
+    } catch {
+      // Empty repo or no commit access — report null
+    }
+
+    // --- Derive REAL analysis from fetched data ---
+    const deps: Record<string, string> = {
+      ...(packageJson?.dependencies || {}),
+      ...(packageJson?.devDependencies || {}),
+    };
+    const dependencyCount = Object.keys(packageJson?.dependencies || {}).length;
+    const devDependencyCount = Object.keys(packageJson?.devDependencies || {}).length;
+
+    let framework = 'unknown';
+    if (deps.next) framework = `Next.js ${deps.next.replace(/[\^~]/, '')}`;
+    else if (deps.react) framework = `React ${deps.react.replace(/[\^~]/, '')}`;
+    else if (deps.vue) framework = `Vue ${deps.vue.replace(/[\^~]/, '')}`;
+    else if (deps.express) framework = `Express ${deps.express.replace(/[\^~]/, '')}`;
+    else if (repoData.language) framework = repoData.language;
+
+    const issues: DetectedIssue[] = [];
+
+    if (daysSinceLastCommit !== null && daysSinceLastCommit > 180) {
+      issues.push({
+        type: 'stale',
+        severity: 'high',
+        message: `No commits in ${daysSinceLastCommit} days — project appears abandoned`,
+      });
+    }
+    if (deps.react && /^[\^~]?(16|17)\./.test(deps.react)) {
+      issues.push({
+        type: 'outdated-react',
+        severity: 'high',
+        message: `React ${deps.react} is outdated (current major is 19)`,
+      });
+    }
+    if (deps.next && parseInt(deps.next.replace(/[\^~]/, '')) < 13) {
+      issues.push({
+        type: 'outdated-nextjs',
+        severity: 'high',
+        message: `Next.js ${deps.next} predates the App Router (v13+)`,
+      });
+    }
+    if (packageJson && !deps.typescript) {
+      issues.push({
+        type: 'no-typescript',
+        severity: 'low',
+        message: 'No TypeScript detected in dependencies',
+      });
+    }
+    if (packageJson && !packageJson.scripts?.test) {
+      issues.push({
+        type: 'no-test-script',
+        severity: 'medium',
+        message: 'No "test" script in package.json',
+      });
+    }
+    if (!packageJson) {
+      issues.push({
+        type: 'no-package-json',
+        severity: 'low',
+        message: 'No package.json found at repo root — not a Node.js project or non-standard layout',
+      });
+    }
+    if (repoData.open_issues_count > 20) {
+      issues.push({
+        type: 'issue-backlog',
+        severity: 'medium',
+        message: `${repoData.open_issues_count} open issues on GitHub`,
+      });
+    }
+
+    const analysis = {
+      language: repoData.language || 'unknown',
+      framework,
+      lastCommit,
+      daysSinceLastCommit,
+      dependencyCount,
+      devDependencyCount,
+      stars: repoData.stargazers_count,
+      openIssues: repoData.open_issues_count,
+      issues,
+    };
+
+    // --- Generate the resurrection plan ---
+    let planSteps: PlanStep[] | null = null;
+    let aiPowered = false;
+
+    if (openai) {
+      try {
+        const prompt = `You are an expert code modernization engineer. Based on this REAL repository analysis, create an ordered resurrection plan.
+
+Repository: ${owner}/${repoName}
+Description: ${repoData.description || 'none'}
+Primary language: ${repoData.language || 'unknown'}
+Framework: ${framework}
+Last commit: ${lastCommit || 'unknown'} (${daysSinceLastCommit ?? 'unknown'} days ago)
+Dependencies (${dependencyCount}): ${JSON.stringify(packageJson?.dependencies || {}, null, 2)}
+Detected issues:
+${issues.map((i) => `- [${i.severity}] ${i.message}`).join('\n') || '- none detected'}
+
+Return a JSON object: { "steps": [{ "title": string, "description": string }] } with 4-7 ordered steps. Every step must be grounded in the data above — do not invent versions or files you cannot see.`;
+
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are an expert at modernizing dormant code repositories. Respond only with valid JSON.',
+            },
+            { role: 'user', content: prompt },
+          ],
+          response_format: { type: 'json_object' },
+        });
+
+        const parsed = JSON.parse(completion.choices[0].message.content || '{}');
+        if (Array.isArray(parsed.steps) && parsed.steps.length > 0) {
+          planSteps = parsed.steps
+            .filter((s: any) => s && typeof s.title === 'string')
+            .map((s: any) => ({
+              title: s.title,
+              description: typeof s.description === 'string' ? s.description : '',
+            }));
+          aiPowered = true;
+        }
+      } catch (error) {
+        console.error('OpenAI plan generation failed, using heuristic plan:', error);
       }
     }
 
-    // DEMO MODE: Show what would happen
-    // Step 1: Clone and analyze
-    const step1 = await analyzeRepository(octokit, owner, repoName, scenario);
-
-    // Step 2: Generate transformation plan with AI
-    const step2 = await generateTransformationPlan(step1.analysis, scenario);
-
-    // Step 3: Apply transformations (simulated for now)
-    const step3 = await applyTransformations(step2.plan);
-
-    // Step 4: Add Stack Auth (ALWAYS - it's the main hackathon feature!)
-    const step4 = await addStackAuth(owner, repoName);
-
-    // Step 5: Create deployment configuration
-    const step5 = await createDeploymentConfig(owner, repoName, scenario);
+    if (!planSteps || planSteps.length === 0) {
+      planSteps = buildHeuristicPlan(analysis, packageJson);
+      aiPowered = false;
+    }
 
     return NextResponse.json({
-      success: true,
-      sessionId,
-      steps: [
-        {
-          id: 'analyze',
-          title: 'Repository Analyzed',
-          status: 'completed',
-          details: step1.details,
-        },
-        {
-          id: 'plan',
-          title: 'Transformation Plan Generated',
-          status: 'completed',
-          details: step2.details,
-        },
-        {
-          id: 'transform',
-          title: 'Code Transformed',
-          status: 'completed',
-          details: step3.details,
-        },
-        {
-          id: 'auth',
-          title: step4.message,
-          status: 'completed',
-          details: step4.details,
-        },
-        {
-          id: 'deploy',
-          title: 'Deployment Ready',
-          status: 'completed',
-          details: step5.details,
-        },
-      ],
-      result: {
-        transformations: step2.plan.transformations,
-        filesModified: step3.filesModified,
-        deploymentUrl: step5.deploymentUrl,
-        prUrl: `https://github.com/${owner}/${repoName}/pull/new/ghost-commit-resurrection`,
+      repo: {
+        owner,
+        name: repoName,
+        fullName: `${owner}/${repoName}`,
+        description: repoData.description,
+        url: repoData.html_url,
       },
+      analysis,
+      plan: {
+        source: aiPowered
+          ? 'AI-generated (OpenAI)'
+          : 'heuristic plan (set OPENAI_API_KEY for AI analysis)',
+        steps: planSteps,
+      },
+      aiPowered,
     });
   } catch (error: any) {
-    console.error('Resurrection error:', error);
-
+    console.error('Resurrect analysis error:', error);
     return NextResponse.json(
       {
-        error: 'Failed to resurrect repository',
+        error: 'Failed to analyze repository',
         details: error.message,
       },
       { status: 500 }
@@ -239,223 +263,76 @@ Review your changes at: ${result.prUrl}`,
   }
 }
 
-async function analyzeRepository(
-  octokit: Octokit,
-  owner: string,
-  repo: string,
-  scenario: string
-) {
-  // Fetch package.json from real GitHub repo
-  let packageJson = null;
-  
-  try {
-    const { data } = await octokit.repos.getContent({
-      owner,
-      repo,
-      path: 'package.json',
+/**
+ * Heuristic fallback plan derived only from data we actually fetched.
+ * Clearly labeled as non-AI in the response ("plan.source").
+ */
+function buildHeuristicPlan(
+  analysis: {
+    issues: DetectedIssue[];
+    framework: string;
+    dependencyCount: number;
+    daysSinceLastCommit: number | null;
+  },
+  packageJson: any
+): PlanStep[] {
+  const steps: PlanStep[] = [];
+
+  steps.push({
+    title: 'Audit the current state',
+    description: `Clone the repo and run a fresh install/build. Framework detected: ${analysis.framework}. ${analysis.dependencyCount} runtime dependencies declared${
+      analysis.daysSinceLastCommit !== null
+        ? `; last commit was ${analysis.daysSinceLastCommit} days ago`
+        : ''
+    }.`,
+  });
+
+  for (const issue of analysis.issues) {
+    switch (issue.type) {
+      case 'outdated-react':
+        steps.push({
+          title: 'Upgrade React',
+          description: `${issue.message}. Upgrade incrementally (16/17 -> 18 -> 19), fixing deprecations at each step.`,
+        });
+        break;
+      case 'outdated-nextjs':
+        steps.push({
+          title: 'Upgrade Next.js',
+          description: `${issue.message}. Upgrade to a current version and evaluate migrating to the App Router.`,
+        });
+        break;
+      case 'no-typescript':
+        steps.push({
+          title: 'Consider adopting TypeScript',
+          description: 'No TypeScript found in dependencies. Adding it incrementally improves maintainability.',
+        });
+        break;
+      case 'no-test-script':
+        steps.push({
+          title: 'Add a test setup',
+          description: 'package.json has no "test" script. Add a test runner and cover critical paths before refactoring.',
+        });
+        break;
+      case 'issue-backlog':
+        steps.push({
+          title: 'Triage the issue backlog',
+          description: `${issue.message}. Close stale issues and identify quick wins.`,
+        });
+        break;
+    }
+  }
+
+  if (packageJson) {
+    steps.push({
+      title: 'Update remaining dependencies',
+      description: `Review the ${analysis.dependencyCount} declared dependencies for outdated or vulnerable packages (npm outdated / npm audit).`,
     });
-
-    if ('content' in data) {
-      const content = Buffer.from(data.content, 'base64').toString();
-      packageJson = JSON.parse(content);
-    }
-  } catch (error) {
-    console.log('No package.json found or GitHub API error:', error);
-    // Continue without package.json
   }
 
-  return {
-    success: true,
-    analysis: {
-      packageJson,
-      scenario,
-      owner,
-      repo,
-    },
-    details: `Analyzed ${owner}/${repo}\nScenario: ${scenario}\nDependencies: ${
-      packageJson ? Object.keys(packageJson.dependencies || {}).length : 0
-    }\nPackage: ${packageJson?.name || 'Unknown'}`,
-  };
-}
+  steps.push({
+    title: 'Verify and document',
+    description: 'Get the build green, update the README with current setup instructions, and set up CI so the project stays alive.',
+  });
 
-async function generateTransformationPlan(analysis: any, scenario: string) {
-  const prompt = `You are an expert code modernization AI. Analyze this repository and create a transformation plan.
-
-Repository: ${analysis.owner}/${analysis.repo}
-Scenario: ${scenario}
-Current Dependencies: ${JSON.stringify(analysis.packageJson?.dependencies || {}, null, 2)}
-
-Create a detailed plan to resurrect this dead project. Include:
-1. Dependencies to update
-2. Breaking changes to fix
-3. New features to add
-4. Deployment strategy
-
-Return a JSON object with: { transformations: string[], addAuth: boolean, deploymentStrategy: string }`;
-
-  // Use OpenAI if available, otherwise use fallback
-  if (openai) {
-    try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at modernizing and resurrecting dead code repositories.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        response_format: { type: 'json_object' },
-      });
-
-      const plan = JSON.parse(completion.choices[0].message.content || '{}');
-
-      return {
-        success: true,
-        plan: {
-          transformations: plan.transformations || [],
-          addAuth: plan.addAuth || false,
-          deploymentStrategy: plan.deploymentStrategy || 'vercel',
-        },
-        details: `AI Generated Plan:\n${plan.transformations?.slice(0, 5).join('\n') || 'No transformations needed'}`,
-      };
-    } catch (error) {
-      console.log('OpenAI error, using fallback');
-    }
-  }
-  
-  // Fallback plan if OpenAI not available or fails
-  const fallbackPlan = getFallbackPlan(scenario);
-  return {
-    success: true,
-    plan: fallbackPlan,
-    details: `Transformation Plan:\n${fallbackPlan.transformations.slice(0, 5).join('\n')}${!openai ? '\n(Add OPENAI_API_KEY for AI-powered analysis)' : ''}`,
-  };
-}
-
-function getFallbackPlan(scenario: string) {
-  const plans: Record<string, any> = {
-    'outdated-react': {
-      transformations: [
-        'Update React 16/17 → 19',
-        'Convert class components to hooks',
-        'Update React Router v5 → v6',
-        'Fix deprecated lifecycle methods',
-        'Update build configuration',
-      ],
-      addAuth: false,
-      deploymentStrategy: 'vercel',
-    },
-    'no-auth': {
-      transformations: [
-        'Install @stackframe/stack',
-        'Create auth pages (login/signup)',
-        'Add protected routes',
-        'Implement user context',
-        'Configure OAuth providers',
-      ],
-      addAuth: true,
-      deploymentStrategy: 'vercel',
-    },
-    'nextjs-migration': {
-      transformations: [
-        'Update Next.js to v14',
-        'Create app directory',
-        'Migrate pages to app router',
-        'Convert to Server Components',
-        'Update API routes to Route Handlers',
-      ],
-      addAuth: false,
-      deploymentStrategy: 'vercel',
-    },
-    default: {
-      transformations: [
-        'Update all dependencies',
-        'Fix breaking changes',
-        'Add modern tooling',
-        'Improve code quality',
-        'Add deployment config',
-      ],
-      addAuth: false,
-      deploymentStrategy: 'vercel',
-    },
-  };
-
-  return plans[scenario] || plans.default;
-}
-
-async function applyTransformations(plan: any) {
-  // In a real implementation, this would:
-  // 1. Clone the repository
-  // 2. Apply code transformations
-  // 3. Run tests
-  // 4. Create a new branch
-  
-  // For now, simulate the process
-  const filesModified = [
-    'package.json',
-    'src/App.tsx',
-    'src/index.tsx',
-    'tsconfig.json',
-    'next.config.js',
-  ];
-
-  return {
-    success: true,
-    filesModified,
-    details: `Modified ${filesModified.length} files:\n${filesModified.join('\n')}`,
-  };
-}
-
-async function addStackAuth(owner: string, repo: string) {
-  // Stack Auth (Y Combinator S24) - Main hackathon feature!
-  // In a real implementation, this would:
-  // 1. Add Stack Auth to package.json
-  // 2. Create auth pages (signin/signup)
-  // 3. Add protected routes
-  // 4. Configure OAuth providers
-  // 5. Set up user management
-
-  return {
-    success: true,
-    message: '🔐 Stack Auth Integration Complete (YC S24)',
-    details: `✅ Installed @stackframe/stack (Y Combinator S24)
-✅ Created /signin and /signup pages
-✅ Added protected route middleware
-✅ Configured Google OAuth
-✅ Configured GitHub OAuth
-✅ Set up user session management
-✅ Added authentication context
-✅ Integrated with existing app
-
-Stack Auth Features Added:
-• Email/Password authentication
-• Google OAuth sign-in
-• GitHub OAuth sign-in
-• Protected dashboard routes
-• User profile management
-• Session persistence
-• Secure token storage
-
-Ready for production deployment!`,
-  };
-}
-
-async function createDeploymentConfig(owner: string, repo: string, scenario: string) {
-  // In a real implementation, this would:
-  // 1. Create vercel.json
-  // 2. Set up environment variables
-  // 3. Configure build settings
-  // 4. Trigger deployment
-
-  const deploymentUrl = `https://${repo}-resurrected.vercel.app`;
-
-  return {
-    success: true,
-    deploymentUrl,
-    details: `✓ Created vercel.json\n✓ Configured build\n✓ Set environment variables\n✓ Ready to deploy to ${deploymentUrl}`,
-  };
+  return steps;
 }
